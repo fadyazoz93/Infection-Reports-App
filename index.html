@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>نظام تقارير مكافحة العدوى</title>
+  <!-- Favicon / App Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
+  <link rel="shortcut icon" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;700&display=swap');
+    body { font-family: 'Tajawal', sans-serif; background-color: #f9fafb; }
+    
+    /* Print Styles */
+    @media print {
+      /* 1. Global Resets for Print */
+      @page { margin: 5mm; size: auto; } /* Narrow Margins */
+
+      html, body { 
+        height: auto !important; 
+        overflow: visible !important; 
+        margin: 0 !important; 
+        padding: 0 !important;
+        width: 100% !important;
+        background-color: white !important;
+      }
+      
+      /* 2. Hide UI Navigation & Helpers */
+      .no-print, #sidebar, #mobileMenu, #archive-filter-input, #loading { 
+        display: none !important; 
+      }
+      
+      /* 3. Reset Layout Containers */
+      div.flex.h-screen.overflow-hidden {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      
+      #main-content {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+
+      /* 4. Section Visibility */
+      .page-section:not(.hidden) {
+        display: block !important;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* 5. Page Break Logic */
+      .page-break { 
+          page-break-after: always !important; 
+          break-after: page !important; 
+          display: block; 
+          height: 1px; 
+          width: 100%;
+          border: none;
+          margin: 0;
+          visibility: hidden;
+      }
+      
+      .print-container {
+          page-break-inside: avoid;
+          break-inside: avoid;
+          margin-bottom: 5px; /* Reduced from 10px */
+      }
+      
+      .avoid-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+      }
+
+      /* 6. Table Optimizations */
+      table { 
+          border-collapse: collapse !important; 
+          width: 100% !important; 
+          font-size: 9pt !important; /* Slightly smaller font for print */
+      }
+      thead { display: table-header-group; } 
+      tr { page-break-inside: avoid; break-inside: avoid; } 
+      th, td { 
+          border: 1px solid #000 !important; 
+          padding: 3px !important; /* Reduced padding */
+          color: #000 !important; 
+      }
+      thead th { 
+          background-color: #f3f4f6 !important; 
+          color: #000 !important;
+          border-bottom: 1px solid #000 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+      }
+      
+      .shadow-md, .shadow, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+      .border { border: 1px solid #ccc !important; }
+    }
+    
+    /* Loader */
+    .loader {
+      border: 4px solid #f3f3f3; border-top: 4px solid #1e3a8a; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Custom Scroll for Checkbox list */
+    .checkbox-list::-webkit-scrollbar { width: 6px; }
+    .checkbox-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    .checkbox-list::-webkit-scrollbar-track { background-color: #f1f5f9; }
+  </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="text-gray-800">
+
+  <!-- Sidebar / Navigation -->
+  <div class="fixed inset-0 flex overflow-hidden">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-blue-900 text-white flex-shrink-0 hidden md:flex flex-col no-print transition-all duration-300 shadow-xl" id="sidebar">
+      <div class="p-4 flex items-center justify-center font-bold text-xl border-b border-blue-800 gap-2.5">
+        <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-8 h-8 object-contain drop-shadow">
+        <span>مكافحة العدوى</span>
+      </div>
+      <nav class="flex-1 overflow-y-auto py-4 flex flex-col">
+        <button onclick="nav('dashboard')" class="w-full text-right py-3 px-6 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-blue-300"><i class="fas fa-chart-pie ml-3 w-6"></i> لوحة التحكم</button>
+        <button onclick="nav('dailyReport')" class="nav-daily w-full text-right py-3 px-6 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-blue-300"><i class="fas fa-calendar-day ml-3 w-6"></i> تقرير يومي</button>
+        <button onclick="nav('monthlyReport')" class="w-full text-right py-3 px-6 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-blue-300"><i class="fas fa-calendar-alt ml-3 w-6"></i> تقارير شهرية</button>
+        <button onclick="nav('annualReport')" class="w-full text-right py-3 px-6 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-blue-300"><i class="fas fa-calendar ml-3 w-6"></i> تقرير سنوي</button>
+        <button onclick="nav('archive')" class="w-full text-right py-3 px-6 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-blue-300"><i class="fas fa-box-archive ml-3 w-6"></i> الأرشيف</button>
+        <button onclick="nav('settings')" class="nav-settings w-full text-right py-3 px-6 hover:bg-blue-800 transition text-yellow-300"><i class="fas fa-cog ml-3 w-6"></i> الإعدادات</button>
+        <div class="mt-auto pt-4 border-t border-blue-800">
+            <button onclick="logout()" class="w-full text-right py-3 px-6 hover:bg-red-800 transition text-red-300"><i class="fas fa-sign-out-alt ml-3 w-6"></i> تسجيل خروج</button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed w-full bg-blue-900 text-white z-50 flex justify-between items-center p-3 px-4 no-print shadow-md">
+       <span class="font-bold flex items-center gap-2">
+         <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-7 h-7 object-contain drop-shadow">
+         <span>مكافحة العدوى</span>
+       </span>
+       <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')"><i class="fas fa-bars text-lg"></i></button>
+    </div>
+    <div id="mobileMenu" class="hidden fixed top-14 left-0 w-full bg-blue-800 text-white z-40 no-print shadow-lg">
+        <button onclick="nav('dashboard')" class="block w-full text-right p-4 border-b border-blue-700">لوحة التحكم</button>
+        <button onclick="nav('dailyReport')" class="nav-daily block w-full text-right p-4 border-b border-blue-700">تقرير يومي</button>
+        <button onclick="nav('monthlyReport')" class="block w-full text-right p-4 border-b border-blue-700">تقارير شهرية</button>
+        <button onclick="nav('annualReport')" class="block w-full text-right p-4 border-b border-blue-700">تقرير سنوي</button>
+        <button onclick="nav('archive')" class="block w-full text-right p-4 border-b border-blue-700">الأرشيف</button>
+        <button onclick="nav('settings')" class="nav-settings block w-full text-right p-4 border-b border-blue-700 text-yellow-300">الإعدادات</button>
+        <button onclick="logout()" class="block w-full text-right p-4 text-red-300">تسجيل خروج</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-auto bg-gray-50 pt-16 md:pt-0" id="main-content">
+      
+      <!-- Loading Indicator -->
+      <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-30 z-[100] flex justify-center items-center">
+        <div class="bg-white p-5 rounded-lg shadow-lg flex flex-col items-center">
+          <div class="loader mb-2"></div>
+          <p class="text-blue-900 font-bold">جاري المعالجة...</p>
+        </div>
+      </div>
+
+      <!-- Login Modal -->
+      <div id="login-modal" class="hidden fixed inset-0 bg-gray-900 z-[200] flex justify-center items-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border-t-4 border-blue-500 text-center">
+           <div class="w-16 h-16 mx-auto mb-3 bg-blue-950 p-2.5 rounded-full border border-blue-700 shadow-inner flex items-center justify-center">
+             <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-full h-full object-contain">
+           </div>
+           <h3 class="text-xl font-bold mb-1 text-white">تسجيل الدخول</h3>
+           <p class="mb-4 text-xs text-blue-200">نظام تقارير مكافحة العدوى</p>
+           <input type="password" id="login-pass-input" class="w-full border border-gray-600 bg-gray-700 text-white placeholder-gray-400 p-2 rounded mb-4 text-center focus:outline-none focus:border-blue-400" placeholder="كلمة المرور">
+           <button onclick="submitLogin()" class="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-500 transition">دخول</button>
+        </div>
+      </div>
+
+      <!-- PAGES -->
+
+      <!-- 1. DASHBOARD -->
+      <section id="dashboard" class="page-section p-6">
+        <h2 class="text-2xl font-bold mb-6 text-blue-900 border-b border-gray-200 pb-2">لوحة التحكم (Dashboard)</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-r-4 border-r-blue-600">
+            <h3 class="text-gray-500 text-sm font-bold">متوسط الالتزام اليوم</h3>
+            <p class="text-3xl font-bold text-blue-700 mt-2" id="dash-daily-val">--%</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-r-4 border-r-emerald-500">
+            <h3 class="text-gray-500 text-sm font-bold">متوسط الالتزام هذا الشهر</h3>
+            <p class="text-3xl font-bold text-emerald-600 mt-2" id="dash-monthly-val">--%</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 border-r-4 border-r-purple-500">
+            <h3 class="text-gray-500 text-sm font-bold">متوسط الالتزام السنوي</h3>
+            <p class="text-3xl font-bold text-purple-600 mt-2" id="dash-yearly-val">--%</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <h4 class="font-bold mb-4 text-blue-900">أداء الأقسام (شهري)</h4>
+            <canvas id="deptChart"></canvas>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <h4 class="font-bold mb-4 text-blue-900">التطور الزمني للالتزام</h4>
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-left no-print">
+          <button onclick="window.print()" class="manger-hide bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow transition">
+            <i class="fas fa-print"></i> طباعة / حفظ PDF
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. SETTINGS -->
+      <section id="settings" class="page-section hidden p-6">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+            <h2 class="text-2xl font-bold text-blue-900">إعدادات النظام</h2>
+            <div class="flex gap-2">
+                <button onclick="saveSettings()" class="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-800 transition font-bold text-sm">حفظ التغييرات</button>
+            </div>
+        </div>
+        <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4 text-sm flex items-center">
+          <i class="fas fa-info-circle ml-2"></i> منطقة محمية. التعديلات هنا تنعكس على كامل النظام.
+        </div>
+
+        <div class="bg-white p-4 rounded shadow-sm border border-gray-200 mb-6">
+            <h3 class="font-bold mb-4 text-blue-900">إعدادات عامة</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">اسم المستشفى (ترويسة التقارير)</label>
+                    <input type="text" id="set-hospital-name" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">توقيع الفريق</label>
+                    <input type="text" id="set-team-signature" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="فريق مكافحة العدوى">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">توقيع المدير</label>
+                    <input type="text" id="set-manager-signature" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="مدير عام المستشفى">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded shadow-sm border border-gray-200 mb-6">
+            <h3 class="font-bold mb-4 text-blue-900">كلمات المرور والصلاحيات</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">كلمة مرور Admin (كافة الصلاحيات)</label>
+                    <input type="text" id="pass-admin" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">كلمة مرور Manger (بدون إعدادات/يومي/طباعة)</label>
+                    <input type="text" id="pass-manger" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">كلمة مرور User (بدون إعدادات)</label>
+                    <input type="text" id="pass-user" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <!-- Depts -->
+           <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
+             <h3 class="font-bold mb-2 text-blue-900">الأقسام</h3>
+             <textarea id="set-depts" class="w-full border border-gray-500 p-2 rounded h-32 bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="كل قسم في سطر جديد"></textarea>
+           </div>
+           <!-- Periods -->
+           <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
+             <h3 class="font-bold mb-2 text-blue-900">فترات المرور</h3>
+             <textarea id="set-periods" class="w-full border border-gray-500 p-2 rounded h-32 bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="كل فترة في سطر جديد"></textarea>
+           </div>
+           <!-- Inspectors -->
+           <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
+             <h3 class="font-bold mb-2 text-blue-900">القائمين بالمرور</h3>
+             <textarea id="set-inspectors" class="w-full border border-gray-500 p-2 rounded h-32 bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="كل اسم في سطر جديد"></textarea>
+           </div>
+        </div>
+
+        <div class="bg-white p-4 rounded shadow-sm border border-gray-200 mt-6">
+            <h3 class="font-bold mb-2 text-blue-900">إجراءات مكافحة العدوى</h3>
+            <table class="w-full text-sm text-right border border-gray-200">
+                <thead class="bg-blue-50 text-blue-900">
+                    <tr>
+                        <th class="p-2 border border-gray-200">الإجراء</th>
+                        <th class="p-2 border border-gray-200">ملاحظة افتراضية</th>
+                        <th class="p-2 border border-gray-200">توصية افتراضية</th>
+                        <th class="p-2 border border-gray-200">الأقسام المطبقة</th>
+                        <th class="p-2 border border-gray-200 w-10"></th>
+                    </tr>
+                </thead>
+                <tbody id="proc-table-body">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+            
+            <div class="flex justify-between items-start mt-4 border-t border-gray-100 pt-4">
+               <button onclick="addProcRow()" class="text-blue-700 text-sm font-bold hover:underline">+ إضافة إجراء جديد (يدوي)</button>
+               
+               <!-- Bulk Import Box -->
+               <div class="bg-gray-100 p-3 rounded border border-gray-300 w-full md:w-1/2 mt-2 md:mt-0">
+                  <h4 class="font-bold text-xs text-gray-700 mb-1 flex items-center gap-1">
+                      <i class="fas fa-file-excel text-green-600"></i> نسخ سريع من إكسيل (Bulk Import)
+                  </h4>
+                  <p class="text-[10px] text-gray-500 mb-2">انسخ الأعمدة من إكسيل بالترتيب: <strong>اسم الإجراء | الملاحظة | التوصية</strong></p>
+                  <textarea id="bulk-proc-input" class="w-full h-20 text-xs p-2 border border-gray-300 rounded focus:border-blue-500 outline-none" placeholder="الصق البيانات هنا..."></textarea>
+                  <button onclick="importBulkProcedures()" class="mt-2 bg-green-600 text-white text-xs px-3 py-1 rounded hover:bg-green-700 transition">استيراد البيانات</button>
+               </div>
+            </div>
+        </div>
+
+        <!-- Database Optimization & Cloud Shielding Card -->
+        <div class="bg-gradient-to-r from-blue-900 to-indigo-950 text-white p-5 rounded-lg shadow-md mb-6 border border-blue-800">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-microchip text-emerald-400 text-lg"></i>
+                    <h3 class="font-bold text-base text-white">ترشيد استهلاك قاعدة البيانات (Database Optimization)</h3>
+                </div>
+                <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> درع الترشيد نشط
+                </span>
+            </div>
+            <p class="text-xs text-blue-200 mb-4 leading-relaxed">
+                النظام محمي بالكامل ضد استنزاف القراءات السحابية (Row Reads Exhaustion): فهارس إلزامية (Mandatory Indexes)، نمط الكاش العشوائي (In-Memory Cache-Aside)، حظر تام لاستعلامات SELECT *، وتقييد حجم الاستعلامات (Query Limits).
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div class="bg-white/10 p-2.5 rounded border border-white/10">
+                    <span class="text-blue-300 block mb-1">الفهارس الإلزامية</span>
+                    <strong class="text-emerald-300 font-bold">7 فهارس نشطة</strong>
+                </div>
+                <div class="bg-white/10 p-2.5 rounded border border-white/10">
+                    <span class="text-blue-300 block mb-1">طبقة الكاش السحابي</span>
+                    <strong class="text-white font-bold" id="cache-hit-rate">In-Memory (0 Reads)</strong>
+                </div>
+                <div class="bg-white/10 p-2.5 rounded border border-white/10">
+                    <span class="text-blue-300 block mb-1">القراءات الموفرة</span>
+                    <strong class="text-emerald-300 font-bold" id="cache-saved-reads">ترشيد لحظي</strong>
+                </div>
+                <div class="bg-white/10 p-2.5 rounded border border-white/10 flex items-center justify-center">
+                    <button onclick="refreshCacheMetricsUI()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition text-xs font-bold flex items-center gap-1">
+                        <i class="fas fa-sync-alt"></i> فحص الكاش
+                    </button>
+                </div>
+            </div>
+        </div>
+      </section>
+
+      <!-- 3. DAILY REPORT FORM -->
+      <section id="dailyReport" class="page-section hidden p-6">
+        <h2 class="text-2xl font-bold mb-6 text-blue-900 border-b border-gray-200 pb-2 no-print">إدخال تقرير يومي</h2>
+        
+        <!-- Input Form -->
+        <div id="daily-form-container" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">التاريخ</label>
+                    <input type="date" id="daily-date" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">الفترة</label>
+                    <select id="daily-period" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none transition"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">القسم</label>
+                    <select id="daily-dept" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none transition" onchange="renderDailyProcedures(this.value)"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">القائم بالمرور</label>
+                    <select id="daily-inspector" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none transition"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">مشرف القسم</label>
+                    <input type="text" id="daily-supervisor" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none transition">
+                </div>
+            </div>
+
+            <h3 class="font-bold text-lg mb-4 text-blue-900 border-b pb-2">تقييم الإجراءات</h3>
+            <p id="proc-hint" class="text-sm text-gray-500 mb-2">اختر القسم أولاً لعرض الإجراءات المناسبة</p>
+            <div id="procedures-list" class="space-y-3">
+                <!-- Generated via JS -->
+            </div>
+
+            <div class="mt-8 text-left">
+                <button onclick="submitDailyReport()" class="bg-emerald-600 text-white px-6 py-2 rounded shadow hover:bg-emerald-700 transition">حفظ وعرض التقرير</button>
+            </div>
+        </div>
+
+        <!-- Generated Report View (Hidden initially) -->
+        <div id="daily-result-view" class="hidden bg-white p-8 max-w-4xl mx-auto border border-gray-300 shadow-lg print-only">
+            <div class="flex items-center justify-between border-b-2 border-blue-900 pb-2 mb-3 avoid-break">
+                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain">
+                <div class="text-center flex-1">
+                    <h1 id="daily-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
+                    <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
+                    <p class="text-gray-600 text-xs mt-0.5">تقرير مرور يومي</p>
+                </div>
+                <div class="w-12"></div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-y-1 gap-x-8 mb-4 text-xs avoid-break">
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">التاريخ:</span> <span id="res-date" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">القسم:</span> <span id="res-dept" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">الفترة:</span> <span id="res-period" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">القائم بالمرور:</span> <span id="res-inspector" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">مشرف القسم:</span> <span id="res-supervisor" class="text-gray-800"></span></p>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-100 p-2 rounded mb-4 text-center avoid-break w-1/2 mx-auto">
+                <span class="text-sm font-bold text-blue-900">نسبة الالتزام الكلية</span>
+                <div class="text-xl font-bold text-blue-700 mt-1" id="res-score"></div>
+            </div>
+
+            <h3 class="font-bold text-base mb-2 text-blue-900 border-b border-gray-300 pb-1 avoid-break">المخالفات والتوصيات</h3>
+            <table class="w-full text-xs border-collapse border border-gray-300 mb-6">
+                <thead>
+                    <tr class="bg-blue-50 text-blue-900">
+                        <th class="border border-gray-300 p-2 w-1/2">الملاحظات</th>
+                        <th class="border border-gray-300 p-2 w-1/2">التوصيات</th>
+                    </tr>
+                </thead>
+                <tbody id="res-table-body">
+                    <!-- Failures go here -->
+                </tbody>
+            </table>
+            
+            <div class="mt-4 pt-2 border-t border-gray-400 text-xs text-gray-800 avoid-break">
+                <p class="font-bold mb-4 text-right">الأجراء المتخذ : تم التبليغ بالملاحظات لأتخاذ الأجراء اللازم</p>
+                <div class="text-left font-bold pl-4">
+                    <p id="daily-team-sig">فريق مكافحة العدوى</p>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center no-print">
+                <button onclick="window.print()" class="manger-hide bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 transition"><i class="fas fa-print"></i> طباعة PDF</button>
+                <button onclick="exportToWord('daily-result-view', 'DailyReport.doc')" class="manger-hide bg-blue-700 text-white px-6 py-2 rounded ml-2 hover:bg-blue-600 transition"><i class="fas fa-file-word"></i> تصدير Word</button>
+                <button onclick="resetDailyForm()" class="bg-gray-500 text-white px-6 py-2 rounded ml-2 hover:bg-gray-600 transition">تقرير جديد</button>
+            </div>
+        </div>
+      </section>
+
+      <!-- 4. MONTHLY REPORT -->
+      <section id="monthlyReport" class="page-section hidden p-6">
+        <h2 class="text-2xl font-bold mb-6 text-blue-900 no-print">التقارير الشهرية</h2>
+        <div class="bg-white p-6 rounded shadow-sm border border-gray-200 mb-4 flex flex-wrap gap-4 items-end justify-between no-print">
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-gray-700">اختر الشهر</label>
+                    <input type="month" id="month-picker" class="border border-gray-300 p-2 rounded bg-gray-50 focus:border-blue-500 outline-none">
+                </div>
+                <button onclick="generatePeriodicReport('monthly')" class="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 transition flex items-center gap-2">
+                    <i class="fas fa-chart-bar"></i> عرض التقرير
+                </button>
+            </div>
+            <button onclick="openCopyMonthModal()" class="manger-hide bg-emerald-700 text-white px-5 py-2 rounded hover:bg-emerald-800 transition flex items-center gap-2 shadow-sm">
+                <i class="fas fa-copy"></i> نسخ تقرير شهري إلى شهر آخر
+            </button>
+        </div>
+
+        <!-- Inline Status Banner for Monthly Report Operations -->
+        <div id="monthly-copy-banner" class="hidden mb-6 p-4 rounded border flex items-center justify-between no-print">
+            <div class="flex items-center gap-3">
+                <i id="monthly-copy-banner-icon" class="fas fa-check-circle text-lg"></i>
+                <span id="monthly-copy-banner-text" class="text-sm font-bold"></span>
+            </div>
+            <button onclick="hideMonthlyBanner()" class="text-gray-500 hover:text-gray-800 px-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div id="monthly-result" class="hidden bg-white p-8 shadow max-w-5xl mx-auto border border-gray-200">
+           <!-- Dynamic Content -->
+        </div>
+
+        <!-- Copy Monthly Report Modal -->
+        <div id="copy-month-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md overflow-hidden">
+                <div class="bg-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <i class="fas fa-copy"></i> نسخ تقرير شهري
+                    </h3>
+                    <button onclick="closeCopyMonthModal()" class="text-blue-200 hover:text-white transition">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        يمكنك نسخ جميع تقييمات وملاحظات المرور المسجلة في شهر معين إلى شهر آخر مع ضبط التواريخ تلقائياً.
+                    </p>
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-gray-800">نسخ من شهر (المصدر)</label>
+                        <input type="month" id="copy-source-month" class="w-full border border-gray-300 p-2.5 rounded bg-gray-50 focus:border-blue-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-gray-800">إلى شهر (الهدف)</label>
+                        <input type="month" id="copy-target-month" class="w-full border border-gray-300 p-2.5 rounded bg-gray-50 focus:border-blue-600 outline-none">
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded p-3">
+                        <label class="flex items-start gap-2.5 cursor-pointer">
+                            <input type="checkbox" id="copy-replace-existing" checked class="mt-1 w-4 h-4 text-emerald-700 rounded border-gray-300 focus:ring-emerald-600">
+                            <span class="text-xs text-amber-900 leading-relaxed font-medium">
+                                استبدال بيانات الشهر الهدف (إن وجدت) لمنع تكرار التقييمات عند النسخ أكثر من مرة.
+                            </span>
+                        </label>
+                    </div>
+                    <div id="copy-month-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded flex items-center gap-2">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="copy-month-error-text"></span>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end gap-3">
+                    <button type="button" onclick="closeCopyMonthModal()" class="px-4 py-2 rounded border border-gray-300 bg-white text-gray-700 text-sm font-bold hover:bg-gray-100 transition">
+                        إلغاء
+                    </button>
+                    <button type="button" id="copy-month-submit-btn" onclick="submitCopyMonthlyReport()" class="px-5 py-2 rounded bg-emerald-700 text-white text-sm font-bold hover:bg-emerald-800 transition flex items-center gap-2">
+                        <i class="fas fa-check"></i> تنفيذ النسخ
+                    </button>
+                </div>
+            </div>
+        </div>
+      </section>
+
+      <!-- 5. ANNUAL REPORT -->
+      <section id="annualReport" class="page-section hidden p-6">
+        <h2 class="text-2xl font-bold mb-6 text-blue-900 no-print">التقرير السنوي</h2>
+        <div class="bg-white p-6 rounded shadow-sm border border-gray-200 mb-6 flex gap-4 items-end no-print">
+            <div>
+                <label class="block text-sm font-bold mb-1 text-gray-700">اختر السنة</label>
+                <select id="year-picker" class="border border-gray-300 p-2 rounded w-32 bg-gray-50 focus:border-blue-500 outline-none">
+                    <!-- Populated via JS -->
+                </select>
+            </div>
+            <button onclick="generatePeriodicReport('yearly')" class="bg-purple-700 text-white px-6 py-2 rounded hover:bg-purple-800 transition">عرض التقرير</button>
+        </div>
+        <div id="yearly-result" class="hidden bg-white p-8 shadow max-w-5xl mx-auto border border-gray-200"></div>
+      </section>
+      
+      <!-- 6. ARCHIVE -->
+      <section id="archive" class="page-section hidden p-6">
+        <h2 class="text-2xl font-bold mb-6 text-blue-900 no-print">الأرشيف</h2>
+        
+        <!-- Archive Search Form -->
+        <div class="bg-white p-6 rounded shadow-sm border border-gray-200 mb-6 no-print">
+          <div class="flex gap-2 mb-4 border-b border-gray-100 pb-3">
+             <span class="text-sm font-bold text-gray-500 flex items-center ml-2">عرض سريع:</span>
+             <button onclick="quickSetDate('today')" class="px-3 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 text-xs font-bold hover:bg-blue-100 transition">اليوم</button>
+             <button onclick="quickSetDate('month')" class="px-3 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 text-xs font-bold hover:bg-blue-100 transition">هذا الشهر</button>
+             <button onclick="quickSetDate('year')" class="px-3 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 text-xs font-bold hover:bg-blue-100 transition">هذه السنة</button>
+          </div>
+          <div class="flex gap-4 items-end flex-wrap">
+             <div>
+               <label class="block text-sm text-gray-700 font-bold mb-1">من تاريخ</label>
+               <input type="date" id="arch-start" class="border border-gray-300 p-2 rounded bg-gray-50 focus:border-blue-500 outline-none">
+             </div>
+             <div>
+               <label class="block text-sm text-gray-700 font-bold mb-1">إلى تاريخ</label>
+               <input type="date" id="arch-end" class="border border-gray-300 p-2 rounded bg-gray-50 focus:border-blue-500 outline-none">
+             </div>
+             <div>
+               <label class="block text-sm text-gray-700 font-bold mb-1">القسم</label>
+               <select id="arch-dept" class="border border-gray-300 p-2 rounded w-40 bg-gray-50 focus:border-blue-500 outline-none"><option value="">الكل</option></select>
+             </div>
+             <div>
+               <label class="block text-sm text-gray-700 font-bold mb-1">القائم بالمرور</label>
+               <select id="arch-inspector" class="border border-gray-300 p-2 rounded w-40 bg-gray-50 focus:border-blue-500 outline-none"><option value="">الكل</option></select>
+             </div>
+             <button onclick="generateArchive()" class="bg-gray-700 text-white px-6 py-2 rounded hover:bg-gray-800 transition">بحث</button>
+          </div>
+        </div>
+
+        <!-- Archive Results List -->
+        <div id="archive-result" class="hidden space-y-4"></div>
+
+        <!-- Archive Detail View (Single Report) -->
+        <div id="archive-detail-view" class="hidden bg-white p-8 max-w-4xl mx-auto border border-gray-300 shadow-lg print-only">
+             <!-- Back Button (No Print) -->
+             <div class="text-left mb-4 no-print border-b pb-4">
+                <button onclick="closeArchiveDetail()" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition flex items-center gap-2">
+                    <i class="fas fa-arrow-right"></i> عودة للقائمة
+                </button>
+             </div>
+
+             <!-- Header -->
+            <div class="text-center border-b-2 border-blue-900 pb-1 mb-2 avoid-break">
+                <h1 id="arc-res-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
+                <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
+                <p class="text-gray-600 text-xs mt-1">تقرير مرور يومي</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-y-1 gap-x-8 mb-4 text-xs avoid-break">
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">التاريخ:</span> <span id="arc-res-date" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">القسم:</span> <span id="arc-res-dept" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">الفترة:</span> <span id="arc-res-period" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">القائم بالمرور:</span> <span id="arc-res-inspector" class="text-gray-800"></span></p>
+                <p class="border-b border-gray-100 py-1"><span class="font-bold text-blue-900">مشرف القسم:</span> <span id="arc-res-supervisor" class="text-gray-800"></span></p>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-100 p-2 rounded mb-4 text-center avoid-break w-1/2 mx-auto">
+                <span class="text-sm font-bold text-blue-900">نسبة الالتزام الكلية</span>
+                <div class="text-xl font-bold text-blue-700 mt-1" id="arc-res-score"></div>
+            </div>
+
+            <h3 class="font-bold text-base mb-2 text-blue-900 border-b border-gray-300 pb-1 avoid-break">المخالفات والتوصيات</h3>
+            <table class="w-full text-xs border-collapse border border-gray-300 mb-6">
+                <thead>
+                    <tr class="bg-blue-50 text-blue-900">
+                        <th class="border border-gray-300 p-2 w-1/2">الملاحظات</th>
+                        <th class="border border-gray-300 p-2 w-1/2">التوصيات</th>
+                    </tr>
+                </thead>
+                <tbody id="arc-res-table-body">
+                    <!-- Failures go here -->
+                </tbody>
+            </table>
+            
+            <div class="mt-4 pt-2 border-t border-gray-400 text-xs text-gray-800 avoid-break">
+                <p class="font-bold mb-4 text-right">الأجراء المتخذ : تم التبليغ بالملاحظات لأتخاذ الأجراء اللازم</p>
+                <div class="text-left font-bold pl-4">
+                    <p id="arc-res-team-sig">فريق مكافحة العدوى</p>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center no-print">
+                <button onclick="window.print()" class="manger-hide bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 transition"><i class="fas fa-print"></i> طباعة PDF</button>
+                <button onclick="exportToWord('archive-detail-view', 'ArchiveReport.doc')" class="manger-hide bg-blue-700 text-white px-6 py-2 rounded ml-2 hover:bg-blue-600 transition"><i class="fas fa-file-word"></i> تصدير Word</button>
+            </div>
+        </div>
+
+        <!-- Archive Batch Print View (Hidden initially) -->
+        <div id="archive-batch-view" class="hidden print-only-container">
+            <div class="no-print mb-4 border-b pb-4 flex justify-between items-center bg-gray-100 p-4 rounded">
+                <button onclick="closeBatchView()" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition flex items-center gap-2">
+                    <i class="fas fa-arrow-right"></i> عودة للقائمة
+                </button>
+                <div class="text-sm text-gray-600 font-bold">معاينة الطباعة المجمعة</div>
+                <div class="flex gap-2">
+                     <button onclick="window.print()" class="manger-hide bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 transition flex items-center gap-2">
+                        <i class="fas fa-print"></i> طباعة الكل (PDF)
+                    </button>
+                    <button onclick="exportToWord('archive-batch-content', 'BatchReports.doc')" class="manger-hide bg-blue-700 text-white px-6 py-2 rounded hover:bg-blue-600 transition flex items-center gap-2">
+                        <i class="fas fa-file-word"></i> تصدير Word
+                    </button>
+                </div>
+            </div>
+            <div id="archive-batch-content">
+                <!-- Dynamic Reports go here -->
+            </div>
+        </div>
+
+      </section>
+
+      <!-- Footer -->
+      <footer class="mt-auto py-4 text-center text-gray-500 text-sm no-print border-t border-gray-200">
+        &copy; 2026 Dr. Fady Ezzat. All Rights Reserved
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- JS Logic -->
+  <script>
+    // --- Setup Environment Variables / API URL ---
+    let API_URL = "/api";
+    
+    if (typeof google === 'undefined') {
+       console.info("Using Full-Stack API at: " + API_URL);
+       
+       // --- Fetch-based Proxy for External Deployment ---
+       const fetchRunner = new Proxy({}, {
+         get: function(target, prop) {
+           if (prop === 'withSuccessHandler') {
+             return function(successCallback) {
+               return new Proxy({}, {
+                 get: function(t, p) {
+                   if (p === 'withFailureHandler') {
+                     return function(failureCallback) {
+                       return new Proxy({}, {
+                         get: function(tt, pp) {
+                           return (...args) => externalApiCall(pp, args, successCallback, failureCallback);
+                         }
+                       });
+                     }
+                   }
+                   return (...args) => externalApiCall(p, args, successCallback, console.error);
+                 }
+               });
+             }
+           }
+           return (...args) => externalApiCall(prop, args, console.log, console.error);
+         }
+       });
+       window.google = { script: { run: fetchRunner } };
+
+       async function externalApiCall(method, args, onSuccess, onFailure) {
+          try {
+              const response = await fetch(API_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ method: method, args: args })
+              });
+              const json = await response.json();
+              if (json.success) {
+                  if (onSuccess) onSuccess(json.data);
+              } else {
+                  throw new Error(json.error || "Unknown server error");
+              }
+          } catch (err) {
+              console.error("External API Error:", err);
+              if (onFailure) onFailure(err);
+          }
+       }
+    }
+
+    // --- Global State ---
+    let settingsData = {};
+    let currentAdminPassword = null;
+    let currentArchiveReports = []; // Store processed archive reports for view details
+
+    // --- Utility: Get Local YYYY-MM-DD ---
+    function getLocalYMD(date) {
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - offset).toISOString().split('T')[0];
+    }
+
+    // --- Export to Word ---
+    function exportToWord(elementId, filename) {
+        const el = document.getElementById(elementId);
+        if(!el) return;
+        
+        // Clone to modify without affecting UI
+        const clone = el.cloneNode(true);
+        
+        // Remove no-print elements from the clone
+        const noPrints = clone.querySelectorAll('.no-print');
+        noPrints.forEach(n => n.remove());
+        
+        // Build Word-compatible HTML
+        const htmlContent = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40' dir='rtl'>
+            <head>
+                <meta charset='utf-8'>
+                <title>${filename}</title>
+                <style>
+                    body { font-family: 'Tajawal', 'Arial', sans-serif; text-align: right; direction: rtl; }
+                    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                    th, td { border: 1px solid #000; padding: 5px; text-align: center; }
+                    th { background-color: #f3f4f6; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .font-bold { font-weight: bold; }
+                    .text-red-700 { color: #b91c1c; }
+                    .text-green-700 { color: #15803d; }
+                    .bg-gray-50 { background-color: #f9fafb; }
+                    .text-blue-900 { color: #1e3a8a; }
+                    /* Header styling emulation */
+                    h1, h2, h3 { margin: 5px 0; text-align: center; color: #1e3a8a; }
+                </style>
+            </head>
+            <body>
+                ${clone.innerHTML}
+            </body>
+            </html>
+        `;
+        
+        const blob = new Blob(['\ufeff', htmlContent], {
+            type: 'application/msword'
+        });
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // --- Navigation ---
+    function nav(pageId) {
+      if (currentRole === 'user' && pageId === 'settings') return;
+      if (currentRole === 'manger' && (pageId === 'settings' || pageId === 'dailyReport')) return;
+
+      document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
+      const page = document.getElementById(pageId);
+      if (page) {
+          page.classList.remove('hidden');
+      } else {
+          console.error("Page not found: " + pageId);
+      }
+      
+      // Close mobile menu if open
+      document.getElementById('mobileMenu').classList.add('hidden');
+
+      if (pageId === 'dashboard') loadDashboard();
+      if (pageId === 'dailyReport') initDailyForm();
+      if (pageId === 'monthlyReport') initMonthly();
+      if (pageId === 'annualReport') initAnnual();
+      if (pageId === 'archive') initArchive();
+    }
+
+    // --- Login & Role Logic ---
+    let currentRole = null;
+
+    function submitLogin() {
+      let pass = document.getElementById('login-pass-input').value;
+      if (!pass) return;
+      pass = pass.trim().replace(/[٠-٩]/g, d => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
+
+      loading(true);
+      
+      google.script.run.withSuccessHandler(data => {
+        loading(false);
+        settingsData = data || {};
+        const pwds = settingsData.passwords || { admin: 'admin', manger: 'manger', user: 'user' };
+        
+        if (pass === pwds.admin) {
+            currentRole = 'admin';
+            completeLogin();
+        } else if (pass === pwds.manger) {
+            currentRole = 'manger';
+            completeLogin();
+        } else if (pass === pwds.user) {
+            currentRole = 'user';
+            completeLogin();
+        } else {
+            alert("كلمة المرور غير صحيحة");
+        }
+      }).withFailureHandler(err => {
+          loading(false);
+          alert("حدث خطأ في الاتصال: " + err);
+      }).getSettings();
+    }
+
+    function completeLogin() {
+        document.getElementById('login-modal').classList.add('hidden');
+        applyRoleRestrictions();
+        
+        // Pre-load settings if admin so they are ready
+        if (currentRole === 'admin') {
+            renderSettingsUI();
+        }
+        
+        nav('dashboard');
+    }
+
+    function applyRoleRestrictions() {
+        const navSettings = document.querySelectorAll('.nav-settings');
+        const navDaily = document.querySelectorAll('.nav-daily');
+        const mangerHide = document.querySelectorAll('.manger-hide');
+        
+        if (currentRole === 'user') {
+            navSettings.forEach(el => el.classList.add('hidden'));
+            navDaily.forEach(el => el.classList.remove('hidden'));
+            mangerHide.forEach(el => el.classList.remove('hidden'));
+        } else if (currentRole === 'manger') {
+            navSettings.forEach(el => el.classList.add('hidden'));
+            navDaily.forEach(el => el.classList.add('hidden'));
+            mangerHide.forEach(el => el.classList.add('hidden'));
+        } else if (currentRole === 'admin') {
+            navSettings.forEach(el => el.classList.remove('hidden'));
+            navDaily.forEach(el => el.classList.remove('hidden'));
+            mangerHide.forEach(el => el.classList.remove('hidden'));
+        }
+    }
+
+    function logout() {
+        currentRole = null;
+        document.getElementById('login-pass-input').value = '';
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById('mobileMenu').classList.add('hidden');
+    }
+
+    document.getElementById('login-pass-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') submitLogin();
+    });
+
+    function loading(show) {
+      document.getElementById('loading').classList.toggle('hidden', !show);
+    }
+
+    // --- Settings Logic ---
+    function loadSettings() {
+      loading(true);
+      google.script.run.withSuccessHandler(data => {
+        settingsData = data;
+        renderSettingsUI();
+        loading(false);
+      }).withFailureHandler(err => {
+        loading(false);
+        alert("فشل تحميل الإعدادات: " + err);
+      }).getSettings();
+    }
+
+
+
+    function renderSettingsUI() {
+      document.getElementById('set-hospital-name').value = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+      document.getElementById('set-team-signature').value = settingsData.teamSignature || 'فريق مكافحة العدوى';
+      document.getElementById('set-manager-signature').value = settingsData.managerSignature || 'مدير عام المستشفى';
+      
+      const pwds = settingsData.passwords || { admin: 'admin', manger: 'manger', user: 'user' };
+      document.getElementById('pass-admin').value = pwds.admin;
+      document.getElementById('pass-manger').value = pwds.manger;
+      document.getElementById('pass-user').value = pwds.user;
+
+      document.getElementById('set-depts').value = (settingsData.departments || []).join('\n');
+      document.getElementById('set-periods').value = (settingsData.periods || []).join('\n');
+      document.getElementById('set-inspectors').value = (settingsData.inspectors || []).join('\n');
+      
+      const tbody = document.getElementById('proc-table-body');
+      tbody.innerHTML = '';
+      (settingsData.procedures || []).forEach((proc, idx) => {
+        addProcRow(proc.name, proc.note, proc.rec, proc.depts);
+      });
+    }
+
+    function addProcRow(name='', note='', rec='', depts=[]) {
+      const tbody = document.getElementById('proc-table-body');
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-gray-50";
+      
+      let deptsHtml = `<div class="bg-white border border-gray-400 p-2 rounded text-xs checkbox-list proc-depts-container h-24 overflow-y-auto">`;
+      settingsData.departments.forEach(dept => {
+          const isChecked = (depts && depts.includes(dept)) ? 'checked' : '';
+          deptsHtml += `<label class="flex items-center mb-1"><input type="checkbox" value="${dept}" ${isChecked} class="mr-1 dept-checkbox">${dept}</label>`;
+      });
+      deptsHtml += `</div>`;
+
+      tr.innerHTML = `
+        <td class="p-2 border border-gray-200 align-top"><input type="text" class="w-full border border-gray-500 p-1 rounded proc-name bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" value="${name}"></td>
+        <td class="p-2 border border-gray-200 align-top"><input type="text" class="w-full border border-gray-500 p-1 rounded proc-note bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" value="${note}"></td>
+        <td class="p-2 border border-gray-200 align-top"><input type="text" class="w-full border border-gray-500 p-1 rounded proc-rec bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" value="${rec}"></td>
+        <td class="p-2 border border-gray-200 align-top w-48">${deptsHtml}</td>
+        <td class="p-2 border border-gray-200 align-top text-center"><button onclick="this.closest('tr').remove()" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+    
+    function importBulkProcedures() {
+      const raw = document.getElementById('bulk-proc-input').value;
+      if (!raw.trim()) {
+        alert("الرجاء لصق البيانات أولاً");
+        return;
+      }
+      
+      const rows = raw.split('\n');
+      let count = 0;
+      
+      rows.forEach(row => {
+          if (!row.trim()) return;
+          // Excel copy-paste creates Tab separated values
+          const cols = row.split('\t'); 
+          
+          // Col 0: Name, Col 1: Note, Col 2: Recommendation
+          const name = cols[0] ? cols[0].trim() : '';
+          const note = cols[1] ? cols[1].trim() : '';
+          const rec  = cols[2] ? cols[2].trim() : '';
+          
+          if (name) {
+              addProcRow(name, note, rec, []); // Empty depts initially means it applies to all until unchecked, or leave empty
+              count++;
+          }
+      });
+      
+      document.getElementById('bulk-proc-input').value = '';
+      alert(`تم إضافة ${count} إجراء بنجاح. راجع القائمة ثم اضغط 'حفظ التغييرات'.`);
+    }
+
+    function saveSettings() {
+      const sanitizePass = (val) => val.trim().replace(/[٠-٩]/g, d => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
+      const newSettings = {
+        hospitalName: document.getElementById('set-hospital-name').value.trim() || 'مستشفى المنيا الجامعى للعيون',
+        teamSignature: document.getElementById('set-team-signature').value.trim() || 'فريق مكافحة العدوى',
+        managerSignature: document.getElementById('set-manager-signature').value.trim() || 'مدير عام المستشفى',
+        passwords: {
+            admin: sanitizePass(document.getElementById('pass-admin').value) || 'admin',
+            manger: sanitizePass(document.getElementById('pass-manger').value) || 'manger',
+            user: sanitizePass(document.getElementById('pass-user').value) || 'user'
+        },
+        departments: document.getElementById('set-depts').value.split('\n').filter(x=>x.trim()),
+        periods: document.getElementById('set-periods').value.split('\n').filter(x=>x.trim()),
+        inspectors: document.getElementById('set-inspectors').value.split('\n').filter(x=>x.trim()),
+        procedures: []
+      };
+
+      document.querySelectorAll('#proc-table-body tr').forEach(tr => {
+        const name = tr.querySelector('.proc-name').value;
+        if (!name) return;
+        const selectedDepts = [];
+        tr.querySelectorAll('.dept-checkbox:checked').forEach(cb => selectedDepts.push(cb.value));
+        newSettings.procedures.push({
+          name: name,
+          note: tr.querySelector('.proc-note').value,
+          rec: tr.querySelector('.proc-rec').value,
+          depts: selectedDepts
+        });
+      });
+
+      loading(true);
+      google.script.run.withSuccessHandler(() => {
+        loading(false);
+        alert('تم حفظ الإعدادات بنجاح');
+        settingsData = newSettings;
+        renderSettingsUI(); 
+      }).withFailureHandler(e => {
+        loading(false);
+        alert('خطأ: ' + e.message);
+      }).saveSettingsData(newSettings);
+    }
+
+    // --- Daily Report Logic ---
+    function initDailyForm() {
+      if (!settingsData.departments) {
+        google.script.run.withSuccessHandler(data => {
+            settingsData = data;
+            populateDailyDropdowns();
+        }).withFailureHandler(err => console.error(err)).getSettings();
+      } else {
+        populateDailyDropdowns();
+      }
+      // Set default to today
+      document.getElementById('daily-date').value = getLocalYMD(new Date());
+    }
+
+    function populateDailyDropdowns() {
+        const fill = (id, arr) => {
+            const el = document.getElementById(id);
+            el.innerHTML = '<option value="">-- اختر --</option>' + arr.map(x => `<option value="${x}">${x}</option>`).join('');
+        };
+        fill('daily-period', settingsData.periods);
+        fill('daily-dept', settingsData.departments);
+        fill('daily-inspector', settingsData.inspectors);
+        document.getElementById('procedures-list').innerHTML = '';
+        document.getElementById('proc-hint').classList.remove('hidden');
+    }
+
+    function renderDailyProcedures(selectedDept) {
+        const list = document.getElementById('procedures-list');
+        const hint = document.getElementById('proc-hint');
+        list.innerHTML = '';
+        
+        if (!selectedDept) {
+            hint.classList.remove('hidden');
+            return;
+        }
+        
+        hint.classList.add('hidden');
+        let found = false;
+        settingsData.procedures.forEach((proc, idx) => {
+            const applies = (!proc.depts || proc.depts.length === 0 || proc.depts.includes(selectedDept));
+            if (applies) {
+                found = true;
+                const div = document.createElement('div');
+                div.className = "bg-gray-50 p-3 rounded border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4";
+                div.innerHTML = `
+                    <div class="font-medium text-gray-800 w-1/3">${proc.name}</div>
+                    <div class="flex gap-4">
+                        <label class="flex items-center"><input type="radio" name="proc_${idx}" value="Yes" class="mr-1 accent-emerald-600"> نعم</label>
+                        <label class="flex items-center"><input type="radio" name="proc_${idx}" value="No" class="mr-1 accent-red-600"> لا</label>
+                        <label class="flex items-center"><input type="radio" name="proc_${idx}" value="NA" class="mr-1 accent-gray-500" checked> غير مطابق</label>
+                    </div>
+                    <div id="fail_inputs_${idx}" class="hidden flex-1 flex gap-2">
+                        <input type="text" id="note_${idx}" placeholder="الملاحظة" class="border border-gray-600 p-1 rounded text-sm w-1/2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500" value="${proc.note}">
+                        <input type="text" id="rec_${idx}" placeholder="التوصية" class="border border-gray-600 p-1 rounded text-sm w-1/2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500" value="${proc.rec}">
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+        });
+        if (!found) list.innerHTML = '<p class="text-center text-gray-500 p-4">لا توجد إجراءات مسجلة لهذا القسم</p>';
+    }
+
+    function submitDailyReport() {
+        const formData = {
+            date: document.getElementById('daily-date').value,
+            period: document.getElementById('daily-period').value,
+            department: document.getElementById('daily-dept').value,
+            inspector: document.getElementById('daily-inspector').value,
+            supervisor: document.getElementById('daily-supervisor').value,
+            evaluations: []
+        };
+
+        if(!formData.date || !formData.department) { alert('أكمل البيانات الأساسية'); return; }
+
+        let yesCount = 0, noCount = 0;
+        const radioGroups = document.querySelectorAll('#procedures-list input[type="radio"]:checked');
+        
+        radioGroups.forEach(radio => {
+             const nameAttr = radio.name;
+             const idx = nameAttr.split('_')[1];
+             const proc = settingsData.procedures[idx];
+             const status = radio.value;
+             let note = '', rec = '';
+             
+             if (status === 'Yes') yesCount++;
+             if (status === 'No') {
+                 noCount++;
+                 note = document.getElementById(`note_${idx}`).value;
+                 rec = document.getElementById(`rec_${idx}`).value;
+             }
+             
+             formData.evaluations.push({
+                 procedure: proc.name,
+                 status: status,
+                 note: note,
+                 rec: rec
+             });
+        });
+
+        const total = yesCount + noCount;
+        const score = total === 0 ? 0 : Math.round((yesCount / total) * 100);
+
+        loading(true);
+        google.script.run.withSuccessHandler(() => {
+            loading(false);
+            cachedDashboardData = null;
+            showDailyResult(formData, score);
+        }).withFailureHandler(err => {
+            loading(false);
+            alert('خطأ في حفظ التقرير: ' + err);
+        }).saveDailyReport(formData);
+    }
+
+    function showDailyResult(data, score) {
+        document.getElementById('daily-form-container').classList.add('hidden');
+        document.getElementById('daily-result-view').classList.remove('hidden');
+
+        document.getElementById('daily-hosp-name').innerText = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+        document.getElementById('daily-team-sig').innerText = settingsData.teamSignature || 'فريق مكافحة العدوى';
+        document.getElementById('res-date').innerText = data.date;
+        document.getElementById('res-dept').innerText = data.department;
+        document.getElementById('res-period').innerText = data.period;
+        document.getElementById('res-inspector').innerText = data.inspector;
+        document.getElementById('res-supervisor').innerText = data.supervisor;
+        document.getElementById('res-score').innerText = score + '%';
+        
+        const tbody = document.getElementById('res-table-body');
+        tbody.innerHTML = '';
+        data.evaluations.filter(e => e.status === 'No').forEach(e => {
+            tbody.innerHTML += `<tr><td class="border border-gray-300 p-2 text-red-700">${e.note}</td><td class="border border-gray-300 p-2">${e.rec}</td></tr>`;
+        });
+    }
+
+    function resetDailyForm() {
+        document.getElementById('daily-form-container').classList.remove('hidden');
+        document.getElementById('daily-result-view').classList.add('hidden');
+        document.getElementById('daily-date').value = getLocalYMD(new Date());
+        initDailyForm();
+    }
+
+    // --- Periodic Reports (Monthly / Annual) ---
+    function initMonthly() {
+        hideMonthlyBanner();
+        const picker = document.getElementById('month-picker');
+        if (!picker.value) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            picker.value = `${y}-${m}`;
+        }
+    }
+
+    function initAnnual() {
+        const select = document.getElementById('year-picker');
+        const currentYear = new Date().getFullYear();
+        select.innerHTML = '';
+        
+        // Populate 2 years before and 2 years after
+        for(let i = currentYear - 2; i <= currentYear + 2; i++) {
+             const opt = document.createElement('option');
+             opt.value = i;
+             opt.innerText = i;
+             if(i === currentYear) opt.selected = true;
+             select.appendChild(opt);
+        }
+    }
+
+    function generatePeriodicReport(type, preserveBanner = false) {
+        const val = type === 'monthly' ? document.getElementById('month-picker').value : document.getElementById('year-picker').value;
+        if (!val) {
+            if (type === 'monthly') showMonthlyBanner('يرجى اختيار الشهر أولاً لعرض التقرير.', true);
+            else alert('اختر التاريخ');
+            return;
+        }
+        if (type === 'monthly' && !preserveBanner) hideMonthlyBanner();
+
+        loading(true);
+        google.script.run.withSuccessHandler(dataRows => {
+            loading(false);
+            processPeriodicData(dataRows, type, val);
+        }).withFailureHandler(err => {
+            loading(false);
+            if (type === 'monthly') showMonthlyBanner('خطأ في جلب التقرير: ' + err, true);
+            else alert('خطأ في جلب التقرير: ' + err);
+        }).getReportData(type, val);
+    }
+
+    function processPeriodicData(rows, type, dateVal) {
+        if(rows.length === 0) {
+            if (type === 'monthly') {
+                document.getElementById('monthly-result').classList.add('hidden');
+                showMonthlyBanner(`لا توجد بيانات مسجلة لشهر (${dateVal}).`, true);
+            } else {
+                alert('لا توجد بيانات لهذه الفترة');
+            }
+            return;
+        }
+
+        let totalYes = 0, totalNo = 0;
+        rows.forEach(r => {
+            if(r[8] === 'Yes') totalYes++;
+            if(r[8] === 'No') totalNo++;
+        });
+        const hospScore = totalYes + totalNo === 0 ? 0 : Math.round((totalYes / (totalYes+totalNo)) * 100);
+
+        const depts = {}; 
+        rows.forEach(r => {
+            const d = r[4];
+            const status = r[8];
+            const note = r[9];
+            const rec = r[10];
+
+            if(!depts[d]) depts[d] = {yes:0, no:0, notes:{}};
+            if(status === 'Yes') depts[d].yes++;
+            if(status === 'No') {
+                depts[d].no++;
+                if(note) {
+                    if(!depts[d].notes[note]) depts[d].notes[note] = {count:0, rec:rec};
+                    depts[d].notes[note].count++;
+                }
+            }
+        });
+
+        const container = type === 'monthly' ? document.getElementById('monthly-result') : document.getElementById('yearly-result');
+        container.classList.remove('hidden');
+        const title = type === 'monthly' ? `تقرير شهر: ${dateVal}` : `تقرير عام: ${dateVal}`;
+        const threshold = type === 'monthly' ? 5 : 15;
+
+        const hospName = settingsData?.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+        const teamSig = settingsData?.teamSignature || 'فريق مكافحة العدوى';
+        const managerSig = settingsData?.managerSignature || 'مدير عام المستشفى';
+        
+        let html = `
+            <div class="flex items-center justify-between mb-2 border-b-2 border-gray-800 pb-2 avoid-break">
+                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain">
+                <div class="text-center flex-1">
+                    <h1 class="text-lg font-bold text-gray-900">${hospName}</h1>
+                    <h2 class="text-base font-bold text-gray-800">وحدة مكافحة العدوى</h2>
+                    <p class="text-sm text-gray-700 mt-1">${title}</p>
+                    <div class="mt-1 text-sm text-gray-800">نسبة التزام المستشفى الكلية: <span class="font-bold text-blue-900 text-lg">${hospScore}%</span></div>
+                </div>
+                <div class="w-12"></div>
+            </div>
+            <div class="mb-4 text-left no-print flex flex-wrap gap-2">
+                <button onclick="window.print()" class="manger-hide bg-gray-800 text-white px-5 py-2 rounded hover:bg-gray-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-print"></i> طباعة PDF
+                </button>
+                <button onclick="exportToWord('${type === 'monthly' ? 'monthly-result' : 'yearly-result'}', '${type}-Report.doc')" class="manger-hide bg-blue-700 text-white px-5 py-2 rounded hover:bg-blue-600 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-word"></i> تصدير Word
+                </button>
+                ${type === 'monthly' ? `
+                <button onclick="openCopyMonthModal('${dateVal}')" class="manger-hide bg-emerald-700 text-white px-5 py-2 rounded hover:bg-emerald-800 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-copy"></i> نسخ هذا الشهر إلى شهر آخر
+                </button>
+                ` : ''}
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs border-collapse border border-gray-800 shadow-sm bg-white" dir="rtl">
+                    <thead class="bg-gray-200 text-gray-900">
+                        <tr>
+                            <th class="border border-gray-600 p-2 text-right font-bold w-1/6 text-sm">القسم</th>
+                            <th class="border border-gray-600 p-2 text-center font-bold w-16 text-sm">النسبة</th>
+                            <th class="border border-gray-600 p-2 text-right font-bold w-2/5 text-sm">الملاحظات</th>
+                            <th class="border border-gray-600 p-2 text-right font-bold text-sm">التوصيات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-900">
+        `;
+
+        Object.keys(depts).forEach(dName => {
+            const d = depts[dName];
+            const dScore = (d.yes + d.no) === 0 ? 0 : Math.round((d.yes / (d.yes+d.no)) * 100);
+            const freqNotes = [];
+            Object.keys(d.notes).forEach(nTxt => {
+                if(d.notes[nTxt].count > threshold) freqNotes.push({txt: nTxt, rec: d.notes[nTxt].rec});
+            });
+
+            const scoreColor = dScore >= 80 ? 'text-green-700' : (dScore >= 50 ? 'text-orange-600' : 'text-red-600');
+
+            if (freqNotes.length > 0) {
+                 html += `<tr class="hover:bg-gray-50 group"><td class="border border-gray-600 p-2 font-bold align-top bg-gray-50 text-sm" rowspan="${freqNotes.length}">${dName}</td><td class="border border-gray-600 p-2 align-top text-center font-bold text-base ${scoreColor}" rowspan="${freqNotes.length}" dir="ltr">${dScore}%</td><td class="border border-gray-600 p-2 text-red-700 align-top font-medium">${freqNotes[0].txt}</td><td class="border border-gray-600 p-2 align-top font-medium">${freqNotes[0].rec}</td></tr>`;
+                 for(let i=1; i<freqNotes.length; i++) {
+                     html += `<tr class="hover:bg-gray-50 group"><td class="border border-gray-600 p-2 text-red-700 align-top font-medium">${freqNotes[i].txt}</td><td class="border border-gray-600 p-2 align-top font-medium">${freqNotes[i].rec}</td></tr>`;
+                 }
+            } else {
+                html += `<tr class="hover:bg-gray-50"><td class="border border-gray-600 p-2 font-bold bg-gray-50 text-sm">${dName}</td><td class="border border-gray-600 p-2 text-center font-bold text-base ${scoreColor}" dir="ltr">${dScore}%</td><td class="border border-gray-600 p-2 text-gray-400 text-center">-</td><td class="border border-gray-600 p-2 text-gray-400 text-center">-</td></tr>`;
+            }
+        });
+
+        html += `</tbody></table></div>`;
+        html += `
+            <div class="mt-6 flex justify-between items-end text-center text-sm font-bold text-gray-900 page-break-inside-avoid print-only avoid-break px-10">
+                <div class="flex flex-col items-center">
+                    <div class="mb-4">${teamSig}</div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="mb-4">${managerSig}</div>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+        applyRoleRestrictions();
+    }
+
+    // --- Copy Monthly Report Modal & Logic ---
+    function getNextMonthStr(ymStr) {
+        if (!ymStr || !ymStr.includes('-')) {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+        const [y, m] = ymStr.split('-').map(Number);
+        const nextDate = new Date(y, m, 1); // m is 1-based, so month index m is next month
+        return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function showMonthlyBanner(message, isError = false) {
+        const banner = document.getElementById('monthly-copy-banner');
+        const icon = document.getElementById('monthly-copy-banner-icon');
+        const text = document.getElementById('monthly-copy-banner-text');
+        if (!banner || !icon || !text) return;
+
+        banner.className = isError
+            ? 'mb-6 p-4 rounded border border-red-200 bg-red-50 text-red-800 flex items-center justify-between no-print'
+            : 'mb-6 p-4 rounded border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center justify-between no-print';
+        icon.className = isError ? 'fas fa-exclamation-circle text-lg text-red-600' : 'fas fa-check-circle text-lg text-emerald-600';
+        text.innerText = message;
+        banner.classList.remove('hidden');
+    }
+
+    function hideMonthlyBanner() {
+        const banner = document.getElementById('monthly-copy-banner');
+        if (banner) banner.classList.add('hidden');
+    }
+
+    function openCopyMonthModal(prefillSource) {
+        if (currentRole === 'manger') return;
+        const currentPicked = prefillSource || document.getElementById('month-picker').value;
+        const srcInput = document.getElementById('copy-source-month');
+        const tgtInput = document.getElementById('copy-target-month');
+        const errBox = document.getElementById('copy-month-error');
+
+        srcInput.value = currentPicked || '';
+        tgtInput.value = getNextMonthStr(currentPicked);
+        document.getElementById('copy-replace-existing').checked = true;
+        errBox.classList.add('hidden');
+
+        document.getElementById('copy-month-modal').classList.remove('hidden');
+    }
+
+    function closeCopyMonthModal() {
+        document.getElementById('copy-month-modal').classList.add('hidden');
+    }
+
+    function showCopyModalError(msg) {
+        const errBox = document.getElementById('copy-month-error');
+        const errText = document.getElementById('copy-month-error-text');
+        errText.innerText = msg;
+        errBox.classList.remove('hidden');
+    }
+
+    function submitCopyMonthlyReport() {
+        if (currentRole === 'manger') return;
+
+        const sourceMonth = document.getElementById('copy-source-month').value;
+        const targetMonth = document.getElementById('copy-target-month').value;
+        const replaceExisting = document.getElementById('copy-replace-existing').checked;
+        const submitBtn = document.getElementById('copy-month-submit-btn');
+
+        if (!sourceMonth || !targetMonth) {
+            showCopyModalError('يرجى تحديد كلٍ من الشهر المصدر والشهر الهدف.');
+            return;
+        }
+
+        if (sourceMonth === targetMonth) {
+            showCopyModalError('لا يمكن نسخ التقرير إلى نفس الشهر المصدر، اختر شهراً مختلفاً.');
+            return;
+        }
+
+        document.getElementById('copy-month-error').classList.add('hidden');
+        submitBtn.disabled = true;
+        const origBtnHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري النسخ...';
+
+        loading(true);
+        google.script.run.withSuccessHandler(res => {
+            loading(false);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnHtml;
+            closeCopyMonthModal();
+
+            // Invalidate client-side dashboard cache so next dashboard visit reflects copied records
+            cachedDashboardData = null;
+
+            // Switch month picker to the target month and render optimistically with 0 follow-up queries
+            document.getElementById('month-picker').value = targetMonth;
+            const count = res && res.copiedCount ? res.copiedCount : '';
+            showMonthlyBanner(`تم نسخ التقرير الشهري بنجاح من (${sourceMonth}) إلى (${targetMonth}) — إجمالي التقييمات المنسوخة: ${count}`);
+            if (res && Array.isArray(res.rows) && res.rows.length > 0 && replaceExisting) {
+                processPeriodicData(res.rows, 'monthly', targetMonth);
+            } else {
+                generatePeriodicReport('monthly', true);
+            }
+        }).withFailureHandler(err => {
+            loading(false);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnHtml;
+            const errMsg = err && err.message ? err.message : String(err);
+            showCopyModalError(errMsg);
+        }).copyMonthlyReport(sourceMonth, targetMonth, replaceExisting);
+    }
+
+    // --- Archive Logic ---
+    function initArchive() {
+       // Auto set "This Month"
+       quickSetDate('month', false);
+
+       if (!settingsData.departments) {
+         google.script.run.withSuccessHandler(data => {
+            settingsData = data;
+            populateArchiveDropdowns();
+            generateArchive();
+         }).withFailureHandler(err => console.error(err)).getSettings();
+       } else {
+         populateArchiveDropdowns();
+         generateArchive();
+       }
+    }
+    
+    function quickSetDate(type, triggerSearch = true) {
+        const now = new Date();
+        const startEl = document.getElementById('arch-start');
+        const endEl = document.getElementById('arch-end');
+        
+        const toLocalYMD = (date) => {
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        if (type === 'today') {
+            const str = toLocalYMD(now);
+            startEl.value = str;
+            endEl.value = str;
+        } else if (type === 'month') {
+            const start = new Date(now.getFullYear(), now.getMonth(), 1);
+            startEl.value = toLocalYMD(start);
+            endEl.value = toLocalYMD(now);
+        } else if (type === 'year') {
+            const start = new Date(now.getFullYear(), 0, 1);
+            startEl.value = toLocalYMD(start);
+            endEl.value = toLocalYMD(now);
+        }
+        
+        if (triggerSearch) generateArchive();
+    }
+
+    function populateArchiveDropdowns() {
+        const fill = (id, arr) => {
+            document.getElementById(id).innerHTML = '<option value="">الكل</option>' + arr.map(x => `<option value="${x}">${x}</option>`).join('');
+        };
+        fill('arch-dept', settingsData.departments);
+        fill('arch-inspector', settingsData.inspectors);
+    }
+
+    function generateArchive() {
+        const start = document.getElementById('arch-start').value;
+        const end = document.getElementById('arch-end').value;
+        const dept = document.getElementById('arch-dept').value;
+        const insp = document.getElementById('arch-inspector').value;
+
+        if(!start || !end) { alert('حدد الفترة'); return; }
+
+        loading(true);
+        google.script.run.withSuccessHandler(rows => {
+            loading(false);
+            const filtered = rows.filter(r => {
+                const matchDept = dept ? r[4] === dept : true;
+                const matchInsp = insp ? r[5] === insp : true;
+                return matchDept && matchInsp;
+            });
+            renderArchive(filtered, {start, end, dept, insp});
+        }).withFailureHandler(err => {
+            loading(false);
+            alert('خطأ في الأرشيف: ' + err);
+        }).getReportData('range', {start, end});
+    }
+
+    function renderArchive(rows, filters) {
+        const container = document.getElementById('archive-result');
+        const detailContainer = document.getElementById('archive-detail-view');
+        const batchContainer = document.getElementById('archive-batch-view');
+        
+        container.classList.remove('hidden');
+        detailContainer.classList.add('hidden');
+        batchContainer.classList.add('hidden');
+        container.innerHTML = '';
+
+        if (rows.length === 0) {
+             container.innerHTML = '<div class="text-center text-gray-500 py-10 bg-gray-50 border border-dashed border-gray-300 rounded">لا توجد بيانات مطابقة للبحث</div>';
+             return;
+        }
+
+        const reports = {};
+        rows.forEach(r => {
+            const dateStr = r[0] || 'Unknown Date';
+            const key = `${dateStr}_${r[3]}_${r[4]}_${r[5]}`;
+
+            if (!reports[key]) {
+                reports[key] = { date: dateStr, period: r[3], dept: r[4], inspector: r[5], supervisor: r[6], yesCount: 0, noCount: 0, rows: [] };
+            }
+            if (r[8] === 'Yes') reports[key].yesCount++;
+            if (r[8] === 'No') reports[key].noCount++;
+            reports[key].rows.push(r);
+        });
+
+        currentArchiveReports = Object.values(reports);
+        currentArchiveReports.sort((a, b) => b.date.localeCompare(a.date));
+
+        const hospName = settingsData?.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+        const printHeader = `
+            <div class="hidden print-only mb-2 border-b-2 border-black pb-1 text-center">
+                <h1 class="text-lg font-bold mb-1">${hospName}</h1>
+                <h2 class="text-base font-bold mb-1">وحدة مكافحة العدوى</h2>
+                <div class="flex flex-wrap justify-center gap-6 text-xs font-bold mt-2">
+                    <span>من تاريخ: ${filters?.start || '-'}</span>
+                    <span>إلى تاريخ: ${filters?.end || '-'}</span>
+                    <span>القسم: ${filters?.dept || 'الكل'}</span>
+                </div>
+            </div>
+        `;
+
+        let html = `
+            ${printHeader}
+            <div class="flex justify-between items-center mb-4 no-print">
+                <h3 class="font-bold text-xl text-blue-900"><i class="fas fa-list-ul ml-2"></i> نتائج البحث (${currentArchiveReports.length} تقرير)</h3>
+                <div class="flex gap-2">
+                    <button onclick="printSelectedReports()" class="manger-hide bg-emerald-600 text-white px-4 py-2 rounded shadow hover:bg-emerald-700 transition flex items-center text-sm">
+                        <i class="fas fa-print ml-2"></i> طباعة المحدد
+                    </button>
+                </div>
+            </div>
+            <div class="mb-6 no-print relative">
+                <input type="text" id="archive-filter-input" onkeyup="filterArchiveTable()" placeholder="تصفية النتائج (ابحث عن قسم، تاريخ، أو نسبة...)" 
+                       class="w-full border border-gray-300 p-3 pr-10 rounded shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                <i class="fas fa-search absolute left-3 top-4 text-gray-400"></i>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                <table id="archive-table" class="w-full text-sm text-right bg-white">
+                    <thead class="bg-blue-900 text-white">
+                        <tr>
+                            <th class="p-4 font-bold border-b border-blue-800 w-10 text-center no-print">
+                                <input type="checkbox" id="archive-select-all" onclick="toggleSelectAllArchive(this)" class="w-4 h-4 accent-blue-300">
+                            </th>
+                            <th class="p-4 font-bold border-b border-blue-800">التاريخ</th>
+                            <th class="p-4 font-bold border-b border-blue-800">الفترة</th>
+                            <th class="p-4 font-bold border-b border-blue-800">القسم</th>
+                            <th class="p-4 font-bold border-b border-blue-800">القائم بالمرور</th>
+                            <th class="p-4 font-bold border-b border-blue-800 text-center">نسبة الالتزام</th>
+                            <th class="p-4 font-bold border-b border-blue-800 w-24 no-print">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+        `;
+
+        currentArchiveReports.forEach((rep, index) => {
+            const total = rep.yesCount + rep.noCount;
+            const score = total === 0 ? 0 : Math.round((rep.yesCount / total) * 100);
+            let badgeClass = 'bg-red-100 text-red-800';
+            if (score >= 80) badgeClass = 'bg-green-100 text-green-800';
+            else if (score >= 50) badgeClass = 'bg-orange-100 text-orange-800';
+
+            html += `
+                <tr class="hover:bg-blue-50 transition text-gray-700">
+                    <td class="p-4 text-center no-print">
+                        <input type="checkbox" class="archive-chk w-4 h-4 accent-blue-600" value="${index}">
+                    </td>
+                    <td class="p-4 font-medium">${rep.date}</td>
+                    <td class="p-4">${rep.period}</td>
+                    <td class="p-4 font-bold text-gray-900">${rep.dept}</td>
+                    <td class="p-4">${rep.inspector}</td>
+                    <td class="p-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${badgeClass}">${score}%</span></td>
+                    <td class="p-4 text-center no-print">
+                         <button onclick="viewArchiveReport(${index})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition">عرض التفاصيل</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += `</tbody></table></div>`;
+        
+        // Print Footer for List View
+        const teamSig = settingsData?.teamSignature || 'فريق مكافحة العدوى';
+        const managerSig = settingsData?.managerSignature || 'مدير عام المستشفى';
+        html += `
+            <div class="mt-4 hidden print-only text-center text-sm font-bold pt-4 border-t border-gray-400">
+                <div class="flex justify-around">
+                    <span>${teamSig}</span>
+                    <span>يعتمد، ${managerSig}</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    function toggleSelectAllArchive(source) {
+        const checkboxes = document.querySelectorAll('.archive-chk');
+        checkboxes.forEach(cb => {
+            if(cb.closest('tr').style.display !== 'none') {
+                cb.checked = source.checked;
+            }
+        });
+    }
+
+    function printSelectedReports() {
+        const checkboxes = document.querySelectorAll('.archive-chk:checked');
+        if (checkboxes.length === 0) {
+            alert("الرجاء تحديد تقرير واحد على الأقل للطباعة");
+            return;
+        }
+
+        const batchContainer = document.getElementById('archive-batch-view');
+        const contentDiv = document.getElementById('archive-batch-content');
+        
+        // Hide list, show batch
+        document.getElementById('archive-result').classList.add('hidden');
+        batchContainer.classList.remove('hidden');
+
+        // Group selected reports by Date
+        const groupedByDate = {};
+        
+        checkboxes.forEach((cb) => {
+            const index = parseInt(cb.value);
+            const report = currentArchiveReports[index];
+            if (report) {
+                if (!groupedByDate[report.date]) {
+                    groupedByDate[report.date] = [];
+                }
+                groupedByDate[report.date].push(report);
+            }
+        });
+
+        let htmlAccumulator = '';
+        const dates = Object.keys(groupedByDate).sort().reverse(); // Show newest dates first
+
+        dates.forEach((date, idx) => {
+            const reports = groupedByDate[date];
+            htmlAccumulator += buildCombinedDailyReport(date, reports);
+            
+            // Add page break if it's not the last date
+            if (idx < dates.length - 1) {
+                htmlAccumulator += '<div class="page-break"></div>';
+            }
+        });
+
+        contentDiv.innerHTML = htmlAccumulator;
+    }
+
+    function buildCombinedDailyReport(date, reports) {
+        // Calculate Total Score for the whole day (Average of displayed reports)
+        let totalYesAll = 0;
+        let totalNoAll = 0;
+        
+        // Build Summary Table Rows
+        let summaryRows = '';
+        
+        // Data structure to group violations by Department across all reports for this day
+        // Key: Department Name, Value: Array of {note, rec}
+        const deptViolationsMap = {};
+
+        reports.forEach(rep => {
+            const total = rep.yesCount + rep.noCount;
+            const score = total === 0 ? 0 : Math.round((rep.yesCount / total) * 100);
+            
+            totalYesAll += rep.yesCount;
+            totalNoAll += rep.noCount;
+
+            // Summary Row
+            let scoreColor = score >= 80 ? 'text-green-700' : (score >= 50 ? 'text-orange-600' : 'text-red-600');
+            summaryRows += `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-400 p-2 font-bold">${rep.dept}</td>
+                    <td class="border border-gray-400 p-2 text-center">${rep.period}</td>
+                    <td class="border border-gray-400 p-2 text-center">${rep.inspector}</td>
+                    <td class="border border-gray-400 p-2 text-center">${rep.supervisor || '-'}</td>
+                    <td class="border border-gray-400 p-2 text-center font-bold ${scoreColor}" dir="ltr">${score}%</td>
+                </tr>
+            `;
+
+            // Aggregate Violations
+            const failures = rep.rows.filter(r => r[8] === 'No');
+            if (failures.length > 0) {
+                if (!deptViolationsMap[rep.dept]) {
+                    deptViolationsMap[rep.dept] = [];
+                }
+                failures.forEach(f => {
+                    // User requested NOT to include procedure name in the note column
+                    // f[9] is the Note, f[10] is Recommendation
+                    deptViolationsMap[rep.dept].push({
+                        note: f[9] || '-',
+                        rec: f[10] || '-'
+                    });
+                });
+            }
+        });
+
+        const dayTotal = totalYesAll + totalNoAll;
+        const dayScore = dayTotal === 0 ? 0 : Math.round((totalYesAll / dayTotal) * 100);
+
+        // Build Details Table Rows (Grouped by Dept)
+        let violationRows = '';
+        const affectedDepts = Object.keys(deptViolationsMap);
+
+        if (affectedDepts.length === 0) {
+            violationRows = '<tr><td colspan="3" class="p-4 text-center text-gray-500 border border-gray-400">لا توجد ملاحظات مسجلة لهذا اليوم في الأقسام المختارة</td></tr>';
+        } else {
+            affectedDepts.forEach(dept => {
+                const items = deptViolationsMap[dept];
+                items.forEach((item, idx) => {
+                    violationRows += `<tr class="hover:bg-gray-50">`;
+                    // Rowspan for Department Name (Merge cells if dept is repeated)
+                    if (idx === 0) {
+                        violationRows += `<td class="border border-gray-400 p-2 font-bold bg-gray-50 align-top" rowspan="${items.length}">${dept}</td>`;
+                    }
+                    violationRows += `
+                        <td class="border border-gray-400 p-2 text-red-700 align-top">${item.note}</td>
+                        <td class="border border-gray-400 p-2 align-top">${item.rec}</td>
+                    </tr>`;
+                });
+            });
+        }
+
+        const hospName = settingsData?.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+        const teamSig = settingsData?.teamSignature || 'فريق مكافحة العدوى';
+        return `
+        <div class="bg-white p-8 border border-gray-200 shadow-sm mb-4 relative print-container">
+            
+            <!-- Header -->
+            <div class="avoid-break text-center border-b-2 border-blue-900 pb-1 mb-2">
+                <h1 class="text-xl font-bold text-blue-900 mb-1">${hospName}</h1>
+                <h2 class="text-lg font-bold text-blue-800">وحدة مكافحة العدوى</h2>
+                <div class="flex justify-between items-end mt-4 px-10">
+                    <p class="text-sm font-bold">تقرير مرور يومي مجمع</p>
+                    <div class="text-sm border border-gray-400 px-4 py-1 rounded bg-gray-50">
+                        <span class="font-bold text-blue-900 ml-2">التاريخ:</span> 
+                        <span class="font-bold text-gray-800">${date}</span>
+                    </div>
+                    <div class="text-sm border border-gray-400 px-4 py-1 rounded bg-blue-50">
+                        <span class="font-bold text-blue-900 ml-2">متوسط الالتزام اليومي:</span> 
+                        <span class="font-bold text-blue-800 text-lg" dir="ltr">${dayScore}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table 1: Summary -->
+            <div class="mb-6">
+                <h3 class="font-bold text-blue-900 mb-2 border-r-4 border-blue-900 pr-2">ملخص المرور</h3>
+                <table class="w-full text-xs border-collapse border border-gray-400">
+                    <thead class="bg-blue-100 text-blue-900">
+                        <tr>
+                            <th class="border border-gray-400 p-2">القسم</th>
+                            <th class="border border-gray-400 p-2">الفترة</th>
+                            <th class="border border-gray-400 p-2">القائم بالمرور</th>
+                            <th class="border border-gray-400 p-2">مشرف القسم</th>
+                            <th class="border border-gray-400 p-2 w-24">نسبة الالتزام</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${summaryRows}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table 2: Details -->
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2 border-r-4 border-red-600 pr-2">تفاصيل الملاحظات والتوصيات</h3>
+                <table class="w-full text-xs border-collapse border border-gray-400">
+                    <thead class="bg-gray-100 text-gray-900">
+                        <tr>
+                            <th class="border border-gray-400 p-2 w-1/5">القسم</th>
+                            <th class="border border-gray-400 p-2 w-2/5">الملاحظات</th>
+                            <th class="border border-gray-400 p-2 w-2/5">التوصيات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${violationRows}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer -->
+            <div class="mt-4 pt-2 border-t border-gray-400 text-sm text-gray-900 avoid-break page-break-inside-avoid">
+                <p class="font-bold mb-4 text-right">الأجراء المتخذ : تم التبليغ بالملاحظات لأتخاذ الأجراء اللازم</p>
+                <div class="text-left font-bold pl-4">
+                    <p>${teamSig}</p>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    function closeBatchView() {
+        document.getElementById('archive-batch-view').classList.add('hidden');
+        document.getElementById('archive-result').classList.remove('hidden');
+    }
+
+    function filterArchiveTable() {
+        const input = document.getElementById('archive-filter-input');
+        const filter = input.value.toLowerCase();
+        const trs = document.getElementById('archive-table').getElementsByTagName('tr');
+        for (let i = 1; i < trs.length; i++) {
+            const tr = trs[i];
+            const tds = tr.getElementsByTagName('td');
+            let txtValue = "";
+            for(let j=0; j < tds.length; j++) txtValue += (tds[j].textContent || tds[j].innerText) + " ";
+            tr.style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+    
+    function viewArchiveReport(index) {
+        const report = currentArchiveReports[index];
+        if(!report) return;
+
+        document.getElementById('archive-result').classList.add('hidden');
+        document.getElementById('archive-detail-view').classList.remove('hidden');
+
+        document.getElementById('arc-res-hosp-name').innerText = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
+        document.getElementById('arc-res-team-sig').innerText = settingsData.teamSignature || 'فريق مكافحة العدوى';
+        document.getElementById('arc-res-date').innerText = report.date;
+        document.getElementById('arc-res-dept').innerText = report.dept;
+        document.getElementById('arc-res-period').innerText = report.period;
+        document.getElementById('arc-res-inspector').innerText = report.inspector;
+        document.getElementById('arc-res-supervisor').innerText = report.supervisor || '-';
+
+        const total = report.yesCount + report.noCount;
+        const score = total === 0 ? 0 : Math.round((report.yesCount / total) * 100);
+        document.getElementById('arc-res-score').innerText = score + '%';
+
+        const tbody = document.getElementById('arc-res-table-body');
+        tbody.innerHTML = '';
+        const failures = report.rows.filter(r => r[8] === 'No');
+
+        if(failures.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">لا توجد مخالفات مسجلة</td></tr>';
+        } else {
+            failures.forEach(r => {
+                tbody.innerHTML += `<tr><td class="border border-gray-300 p-2 text-red-700">${r[9] || '-'}</td><td class="border border-gray-300 p-2">${r[10] || '-'}</td></tr>`;
+            });
+        }
+    }
+    
+    function closeArchiveDetail() {
+        document.getElementById('archive-detail-view').classList.add('hidden');
+        document.getElementById('archive-result').classList.remove('hidden');
+    }
+
+    // --- Client In-Memory Caching for Dashboard ---
+    let cachedDashboardData = null;
+    let lastDashboardFetch = 0;
+
+    // --- Dashboard Charts ---
+    function loadDashboard(force = false) {
+      const now = Date.now();
+      // Reuse local memory cache if less than 60 seconds old to completely eliminate unnecessary roundtrips
+      if (!force && cachedDashboardData && (now - lastDashboardFetch < 60000)) {
+        processDashboardMetrics(cachedDashboardData);
+        return;
+      }
+
+      google.script.run.withSuccessHandler(data => {
+         cachedDashboardData = data || [];
+         lastDashboardFetch = Date.now();
+         processDashboardMetrics(cachedDashboardData);
+      }).withFailureHandler(err => console.error("Dashboard Load Error: ", err)).getDashboardMetrics();
+    }
+
+    function processDashboardMetrics(data) {
+       let totalYes=0, totalNo=0, dayYes=0, dayNo=0, monYes=0, monNo=0;
+       const deptStats = {}, dailyTrend = {};
+       const today = new Date().toISOString().split('T')[0];
+       const thisMonth = new Date().getMonth();
+       
+       data.forEach(r => {
+          const dStr = r.date;
+          const dObj = new Date(dStr);
+          const status = r.status;
+          
+          if(status === 'Yes') totalYes++;
+          if(status === 'No') totalNo++;
+
+          if(dStr === today) {
+              if(status === 'Yes') dayYes++;
+              if(status === 'No') dayNo++;
+          }
+          if(dObj.getMonth() === thisMonth && dObj.getFullYear() === new Date().getFullYear()) {
+              if(status === 'Yes') monYes++;
+              if(status === 'No') monNo++;
+              if(!deptStats[r.dept]) deptStats[r.dept] = {yes:0, no:0};
+              if(status === 'Yes') deptStats[r.dept].yes++;
+              if(status === 'No') deptStats[r.dept].no++;
+          }
+
+          if(!dailyTrend[dStr]) dailyTrend[dStr] = {yes:0, no:0};
+          if(status === 'Yes') dailyTrend[dStr].yes++;
+          if(status === 'No') dailyTrend[dStr].no++;
+       });
+
+       const calc = (y, n) => (y+n)===0 ? 0 : Math.round((y/(y+n))*100);
+       document.getElementById('dash-daily-val').innerText = calc(dayYes, dayNo) + '%';
+       document.getElementById('dash-monthly-val').innerText = calc(monYes, monNo) + '%';
+       document.getElementById('dash-yearly-val').innerText = calc(totalYes, totalNo) + '%';
+
+       renderCharts(deptStats, dailyTrend);
+    }
+
+    function refreshCacheMetricsUI() {
+      google.script.run.withSuccessHandler(metrics => {
+        if (!metrics) return;
+        const hitRateEl = document.getElementById('cache-hit-rate');
+        const savedReadsEl = document.getElementById('cache-saved-reads');
+        if (hitRateEl) hitRateEl.innerText = `نسبة النجاح: ${metrics.hitRate || '100%'}`;
+        if (savedReadsEl) savedReadsEl.innerText = `${metrics.savedCloudReads || 0} استعلام موفر`;
+      }).withFailureHandler(err => console.warn(err)).getCacheMetrics();
+    }
+
+    let deptChartInst = null;
+    let trendChartInst = null;
+
+    function renderCharts(deptStats, dailyTrend) {
+        const deptLabels = Object.keys(deptStats);
+        const deptScores = deptLabels.map(d => {
+            const s = deptStats[d];
+            return s.yes + s.no === 0 ? 0 : Math.round((s.yes/(s.yes+s.no))*100);
+        });
+
+        const ctx1 = document.getElementById('deptChart').getContext('2d');
+        if(deptChartInst) deptChartInst.destroy();
+        deptChartInst = new Chart(ctx1, {
+            type: 'bar',
+            data: { labels: deptLabels, datasets: [{ label: 'نسبة الالتزام %', data: deptScores, backgroundColor: '#1e3a8a', borderRadius: 4 }] },
+            options: { responsive: true }
+        });
+
+        const trendDates = Object.keys(dailyTrend).sort();
+        const trendScores = trendDates.map(d => {
+             const s = dailyTrend[d];
+             return s.yes + s.no === 0 ? 0 : Math.round((s.yes/(s.yes+s.no))*100);
+        });
+
+        const ctx2 = document.getElementById('trendChart').getContext('2d');
+        if(trendChartInst) trendChartInst.destroy();
+        trendChartInst = new Chart(ctx2, {
+            type: 'line',
+            data: { labels: trendDates, datasets: [{ label: 'الالتزام اليومي', data: trendScores, borderColor: '#059669', backgroundColor: 'rgba(5, 150, 105, 0.1)', tension: 0.1, fill: true }] },
+            options: { responsive: true }
+        });
+    }
+
+    window.onload = function() { 
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.getElementById('login-pass-input').focus();
+    };
+  </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

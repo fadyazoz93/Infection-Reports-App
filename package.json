@@ -1,0 +1,22 @@
+{
+  "name": "infection-reports",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx tsx server.ts",
+    "build": "vite build",
+    "start": "npx tsx server.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.14.0",
+    "tsx": "^4.23.1",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

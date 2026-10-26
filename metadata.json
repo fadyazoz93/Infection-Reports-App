@@ -1,0 +1,6 @@
+{
+  "description": "Infection prevention and control reports system, supporting offline operations and database synchronization.",
+  "requestFramePermissions": [],
+  "name": "Infection Reports App",
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
