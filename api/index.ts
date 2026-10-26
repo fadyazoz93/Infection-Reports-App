@@ -30,6 +30,60 @@ const REPORT_COLUMNS = [
   'timestamp'
 ].join(', ');
 
+// Safe server-side proxy for public Google Drive logo images (avoids browser CORS/ORB blocks & caches in RAM with 0 DB reads)
+app.get('/api/drive-image', async (req: Request, res: Response) => {
+  try {
+    const fileId = String(req.query.id || '').trim();
+    if (!/^[a-zA-Z0-9_-]{10,120}$/.test(fileId)) {
+      return res.status(400).send('Invalid Google Drive file ID');
+    }
+
+    const cacheKey = `drive_img:${fileId}`;
+    const cachedImg = memoryCache.get<{ buffer: Buffer; contentType: string }>(cacheKey);
+    if (cachedImg) {
+      res.setHeader('Content-Type', cachedImg.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(cachedImg.buffer);
+    }
+
+    const candidateUrls = [
+      `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w600`,
+      `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`,
+      `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`
+    ];
+
+    for (const url of candidateUrls) {
+      try {
+        const upstream = await fetch(url, {
+          redirect: 'follow',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; InfectionControlReports/1.0)',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+          }
+        });
+
+        const contentType = upstream.headers.get('content-type') || '';
+        if (upstream.ok && contentType.startsWith('image/')) {
+          const arrayBuf = await upstream.arrayBuffer();
+          const buffer = Buffer.from(arrayBuf);
+          if (buffer.length > 0 && buffer.length <= 8 * 1024 * 1024) {
+            memoryCache.set(cacheKey, { buffer, contentType }, 60 * 60 * 1000);
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(buffer);
+          }
+        }
+      } catch {
+        // Try next candidate URL
+      }
+    }
+
+    return res.status(404).send('Image not accessible. Ensure Google Drive file sharing is set to Anyone with the link.');
+  } catch (err) {
+    return res.status(500).send('Failed to proxy image');
+  }
+});
+
 // RPC Gateway Handler
 app.post('/api', async (req: Request, res: Response) => {
   try {
@@ -72,6 +126,8 @@ app.post('/api', async (req: Request, res: Response) => {
             hospitalName: 'مستشفى المنيا الجامعى للعيون',
             teamSignature: 'فريق مكافحة العدوى',
             managerSignature: 'مدير عام المستشفى',
+            rightLogoUrl: '',
+            leftLogoUrl: '',
             passwords: { admin: 'admin', manger: 'manger', user: 'user' },
             departments: ['طوارئ', 'عناية مركزة', 'عمليات', 'عيادات خارجية'],
             periods: ['صباحية', 'مسائية', 'سهر'],

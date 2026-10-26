@@ -34,13 +34,47 @@
         background-color: white !important;
       }
       
-      /* 2. Hide UI Navigation, Helpers & Logos in Print/PDF */
+      /* 2. Hide UI Navigation, Helpers & Default App Favicon in Print/PDF */
       .no-print, #sidebar, #mobileMenu, #archive-filter-input, #loading, img[src*="favicon"] { 
         display: none !important; 
       }
+
+      /* Custom Right & Left Header Logos in Print/PDF */
+      .report-header-bar {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+      }
+      .report-logo-slot {
+        width: 58px !important;
+        height: 58px !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+      .report-logo-slot-right {
+        justify-content: flex-start !important;
+      }
+      .report-logo-slot-left {
+        justify-content: flex-end !important;
+      }
+      .report-header-logo {
+        max-width: 58px !important;
+        max-height: 58px !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+        display: block !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       
       /* 3. Reset Layout Containers */
-      div.flex.h-screen.overflow-hidden {
+      div.flex.h-screen.overflow-hidden,
+      div.fixed.inset-0.flex.overflow-hidden {
+        position: static !important;
         display: block !important;
         height: auto !important;
         overflow: visible !important;
@@ -122,6 +156,35 @@
     .checkbox-list::-webkit-scrollbar { width: 6px; }
     .checkbox-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     .checkbox-list::-webkit-scrollbar-track { background-color: #f1f5f9; }
+
+    /* Report Header Logos (Screen) */
+    .report-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .report-logo-slot {
+      width: 68px;
+      height: 68px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .report-logo-slot-right {
+      justify-content: flex-start;
+    }
+    .report-logo-slot-left {
+      justify-content: flex-end;
+    }
+    .report-header-logo {
+      max-width: 68px;
+      max-height: 68px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
   </style>
 <link rel="stylesheet" href="/index.css">
 </head>
@@ -238,6 +301,16 @@
                 <button onclick="saveSettings()" class="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-800 transition font-bold text-sm">حفظ التغييرات</button>
             </div>
         </div>
+        <div id="settings-save-banner" class="hidden mb-4 p-3 rounded border text-sm font-bold flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i id="settings-save-banner-icon" class="fas fa-check-circle"></i>
+                <span id="settings-save-banner-text"></span>
+            </div>
+            <button type="button" onclick="document.getElementById('settings-save-banner').classList.add('hidden')" class="text-gray-500 hover:text-gray-800 px-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
         <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4 text-sm flex items-center">
           <i class="fas fa-info-circle ml-2"></i> منطقة محمية. التعديلات هنا تنعكس على كامل النظام.
         </div>
@@ -247,7 +320,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-bold mb-1 text-gray-700">اسم المستشفى (ترويسة التقارير)</label>
-                    <input type="text" id="set-hospital-name" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
+                    <input type="text" id="set-hospital-name" oninput="updateLiveHeaderTitlePreview()" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400">
                 </div>
                 <div>
                     <label class="block text-sm font-bold mb-1 text-gray-700">توقيع الفريق</label>
@@ -256,6 +329,77 @@
                 <div>
                     <label class="block text-sm font-bold mb-1 text-gray-700">توقيع المدير</label>
                     <input type="text" id="set-manager-signature" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 focus:outline-none focus:border-blue-400" placeholder="مدير عام المستشفى">
+                </div>
+            </div>
+        </div>
+
+        <!-- Header Logos Configuration (Google Drive Links) -->
+        <div class="bg-white p-4 rounded shadow-sm border border-gray-200 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 class="font-bold text-blue-900 flex items-center gap-2">
+                    <i class="fas fa-images text-blue-700"></i> شعارات ترويسة التقارير (Google Drive)
+                </h3>
+                <span class="text-xs text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded">
+                    تظهر في الترويسة على الشاشة وعند طباعة PDF
+                </span>
+            </div>
+            <p class="text-xs text-gray-500 mb-4">
+                الصق رابط مشاركة الصورة من جوجل درايف (تأكد من ضبط صلاحية الملف في Google Drive على: <strong>أي شخص لديه الرابط / Anyone with the link</strong>).
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                <!-- Far Right Logo -->
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-bold text-gray-800">رابط اللوجو أقصى اليمين</label>
+                        <button type="button" onclick="clearLogoInput('right')" class="text-xs text-red-600 hover:text-red-800 font-bold">
+                            <i class="fas fa-times-circle"></i> مسح
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-16 h-16 rounded border border-dashed border-gray-300 bg-white flex items-center justify-center shrink-0 p-1 overflow-hidden">
+                            <img id="preview-right-logo" alt="لوجو اليمين" class="hidden max-w-full max-h-full object-contain" onload="onPreviewLogoLoad('right')" onerror="onPreviewLogoError('right')">
+                            <i id="placeholder-right-logo" class="fas fa-image text-gray-300 text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="url" id="set-right-logo" dir="ltr" oninput="updateSettingsLogoPreview('right')" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 text-xs focus:outline-none focus:border-blue-400">
+                            <p id="status-right-logo" class="text-[11px] text-gray-500 mt-1">اختياري — يظهر أقصى يمين الترويسة</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Far Left Logo -->
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-bold text-gray-800">رابط اللوجو أقصى اليسار</label>
+                        <button type="button" onclick="clearLogoInput('left')" class="text-xs text-red-600 hover:text-red-800 font-bold">
+                            <i class="fas fa-times-circle"></i> مسح
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-16 h-16 rounded border border-dashed border-gray-300 bg-white flex items-center justify-center shrink-0 p-1 overflow-hidden">
+                            <img id="preview-left-logo" alt="لوجو اليسار" class="hidden max-w-full max-h-full object-contain" onload="onPreviewLogoLoad('left')" onerror="onPreviewLogoError('left')">
+                            <i id="placeholder-left-logo" class="fas fa-image text-gray-300 text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="url" id="set-left-logo" dir="ltr" oninput="updateSettingsLogoPreview('left')" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" class="w-full border border-gray-500 p-2 rounded bg-gray-600 text-white placeholder-gray-300 text-xs focus:outline-none focus:border-blue-400">
+                            <p id="status-left-logo" class="text-[11px] text-gray-500 mt-1">اختياري — يظهر أقصى يسار الترويسة</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Header Simulation -->
+            <div class="border border-gray-300 rounded-lg p-4 bg-white">
+                <div class="text-[11px] font-bold text-gray-400 mb-2">معاينة شكل ترويسة التقرير (Header Preview):</div>
+                <div class="report-header-bar border-b-2 border-blue-900 pb-2">
+                    <div id="live-header-right-slot" class="report-logo-slot report-logo-slot-right"></div>
+                    <div class="text-center flex-1 px-2">
+                        <h4 id="live-header-hosp-name" class="text-base md:text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h4>
+                        <p class="text-sm font-bold text-blue-800">وحدة مكافحة العدوى</p>
+                        <p class="text-xs text-gray-500 mt-0.5">نموذج ترويسة التقرير المطبوع</p>
+                    </div>
+                    <div id="live-header-left-slot" class="report-logo-slot report-logo-slot-left"></div>
                 </div>
             </div>
         </div>
@@ -406,14 +550,14 @@
 
         <!-- Generated Report View (Hidden initially) -->
         <div id="daily-result-view" class="hidden bg-white p-8 max-w-4xl mx-auto border border-gray-300 shadow-lg print-only">
-            <div class="flex items-center justify-between border-b-2 border-blue-900 pb-2 mb-3 avoid-break">
-                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain no-print">
-                <div class="text-center flex-1">
+            <div class="report-header-bar border-b-2 border-blue-900 pb-2 mb-3 avoid-break">
+                <div id="daily-right-logo-slot" class="report-logo-slot report-logo-slot-right"></div>
+                <div class="text-center flex-1 px-2">
                     <h1 id="daily-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
                     <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
                     <p class="text-gray-600 text-xs mt-0.5">تقرير مرور يومي</p>
                 </div>
-                <div class="w-12 no-print"></div>
+                <div id="daily-left-logo-slot" class="report-logo-slot report-logo-slot-left"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-y-1 gap-x-8 mb-4 text-xs avoid-break">
@@ -599,10 +743,14 @@
              </div>
 
              <!-- Header -->
-            <div class="text-center border-b-2 border-blue-900 pb-1 mb-2 avoid-break">
-                <h1 id="arc-res-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
-                <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
-                <p class="text-gray-600 text-xs mt-1">تقرير مرور يومي</p>
+            <div class="report-header-bar border-b-2 border-blue-900 pb-2 mb-3 avoid-break">
+                <div id="arc-right-logo-slot" class="report-logo-slot report-logo-slot-right"></div>
+                <div class="text-center flex-1 px-2">
+                    <h1 id="arc-res-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
+                    <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
+                    <p class="text-gray-600 text-xs mt-1">تقرير مرور يومي</p>
+                </div>
+                <div id="arc-left-logo-slot" class="report-logo-slot report-logo-slot-left"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-y-1 gap-x-8 mb-4 text-xs avoid-break">
@@ -679,8 +827,9 @@
   <script>
     // --- Setup Environment Variables / API URL ---
     let API_URL = "/api";
+    const USE_SERVER_API = (typeof google === 'undefined');
     
-    if (typeof google === 'undefined') {
+    if (USE_SERVER_API) {
        console.info("Using Full-Stack API at: " + API_URL);
        
        // --- Fetch-based Proxy for External Deployment ---
@@ -740,6 +889,99 @@
         return new Date(date.getTime() - offset).toISOString().split('T')[0];
     }
 
+    // --- Google Drive Logo Helpers ---
+    function extractGoogleDriveFileId(rawUrl) {
+        if (!rawUrl || typeof rawUrl !== 'string') return null;
+        const trimmed = rawUrl.trim();
+        if (!trimmed) return null;
+
+        if (trimmed.includes('drive.google.com') || trimmed.includes('googleusercontent.com') || trimmed.includes('docs.google.com')) {
+            const pathMatch = trimmed.match(/\/(?:file\/)?d\/([a-zA-Z0-9_-]{10,})/);
+            if (pathMatch && pathMatch[1]) return pathMatch[1];
+
+            const queryMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+            if (queryMatch && queryMatch[1]) return queryMatch[1];
+        }
+        return null;
+    }
+
+    function resolveLogoSources(rawUrl) {
+        if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+            return null;
+        }
+        const trimmed = rawUrl.trim();
+        const fileId = extractGoogleDriveFileId(trimmed);
+
+        if (fileId) {
+            const thumbUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w400`;
+            const lh3Url = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w400`;
+            if (USE_SERVER_API) {
+                return {
+                    primary: `${API_URL}/drive-image?id=${encodeURIComponent(fileId)}`,
+                    fb1: thumbUrl,
+                    fb2: lh3Url,
+                    externalUrl: thumbUrl
+                };
+            }
+            return {
+                primary: thumbUrl,
+                fb1: lh3Url,
+                fb2: '',
+                externalUrl: thumbUrl
+            };
+        }
+
+        return {
+            primary: trimmed,
+            fb1: '',
+            fb2: '',
+            externalUrl: trimmed
+        };
+    }
+
+    function escapeHtmlAttr(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function handleLogoImgError(imgEl) {
+        const step = Number(imgEl.dataset.fallbackStep || '0');
+        const fb1 = imgEl.dataset.fb1 || '';
+        const fb2 = imgEl.dataset.fb2 || '';
+        if (step === 0 && fb1 && imgEl.src !== fb1) {
+            imgEl.dataset.fallbackStep = '1';
+            imgEl.src = fb1;
+        } else if (step <= 1 && fb2 && imgEl.src !== fb2) {
+            imgEl.dataset.fallbackStep = '2';
+            imgEl.src = fb2;
+        } else {
+            imgEl.style.display = 'none';
+        }
+    }
+
+    function buildLogoImgHtml(rawUrl, altText) {
+        const sources = resolveLogoSources(rawUrl);
+        if (!sources) return '';
+        return `<img src="${escapeHtmlAttr(sources.primary)}" data-fb1="${escapeHtmlAttr(sources.fb1)}" data-fb2="${escapeHtmlAttr(sources.fb2)}" data-external-url="${escapeHtmlAttr(sources.externalUrl)}" alt="${escapeHtmlAttr(altText)}" class="report-header-logo" onerror="handleLogoImgError(this)">`;
+    }
+
+    function getReportLogoSlotHtml(side) {
+        const rawUrl = side === 'right' ? (settingsData?.rightLogoUrl || '') : (settingsData?.leftLogoUrl || '');
+        const alignClass = side === 'right' ? 'report-logo-slot-right' : 'report-logo-slot-left';
+        const alt = side === 'right' ? 'شعار يمين التقرير' : 'شعار يسار التقرير';
+        return `<div class="report-logo-slot ${alignClass}">${buildLogoImgHtml(rawUrl, alt)}</div>`;
+    }
+
+    function populateReportLogoSlots(rightSlotId, leftSlotId) {
+        const rightSlot = document.getElementById(rightSlotId);
+        const leftSlot = document.getElementById(leftSlotId);
+        if (rightSlot) rightSlot.innerHTML = buildLogoImgHtml(settingsData?.rightLogoUrl || '', 'شعار يمين التقرير');
+        if (leftSlot) leftSlot.innerHTML = buildLogoImgHtml(settingsData?.leftLogoUrl || '', 'شعار يسار التقرير');
+    }
+
     // --- Export to Word ---
     function exportToWord(elementId, filename) {
         const el = document.getElementById(elementId);
@@ -751,6 +993,43 @@
         // Remove no-print elements from the clone
         const noPrints = clone.querySelectorAll('.no-print');
         noPrints.forEach(n => n.remove());
+
+        // Convert flex report-header-bar into Word-friendly 3-column borderless table with bounded logo dimensions
+        clone.querySelectorAll('.report-header-bar').forEach(bar => {
+            const children = Array.from(bar.children);
+            if (children.length === 3) {
+                children.forEach(col => {
+                    col.querySelectorAll('img.report-header-logo').forEach(img => {
+                        const extUrl = img.getAttribute('data-external-url') || img.getAttribute('src') || '';
+                        if (extUrl.startsWith('/')) {
+                            img.setAttribute('src', window.location.origin + extUrl);
+                        } else if (extUrl) {
+                            img.setAttribute('src', extUrl);
+                        }
+                        img.setAttribute('width', '60');
+                        img.setAttribute('height', '60');
+                        img.style.width = '60px';
+                        img.style.height = '60px';
+                        img.style.objectFit = 'contain';
+                    });
+                });
+                const layoutTable = document.createElement('table');
+                layoutTable.className = 'header-layout-table';
+                layoutTable.setAttribute('dir', 'rtl');
+                layoutTable.style.width = '100%';
+                layoutTable.style.border = 'none';
+                layoutTable.style.marginBottom = '8px';
+                layoutTable.style.borderBottom = '2px solid #1e3a8a';
+                layoutTable.innerHTML = `
+                    <tr>
+                        <td style="border:none; width:75px; text-align:right; vertical-align:middle;">${children[0].innerHTML}</td>
+                        <td style="border:none; text-align:center; vertical-align:middle;">${children[1].innerHTML}</td>
+                        <td style="border:none; width:75px; text-align:left; vertical-align:middle;">${children[2].innerHTML}</td>
+                    </tr>
+                `;
+                bar.replaceWith(layoutTable);
+            }
+        });
         
         // Build Word-compatible HTML
         const htmlContent = `
@@ -762,6 +1041,7 @@
                     body { font-family: 'Tajawal', 'Arial', sans-serif; text-align: right; direction: rtl; }
                     table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
                     th, td { border: 1px solid #000; padding: 5px; text-align: center; }
+                    table.header-layout-table, table.header-layout-table td { border: none !important; }
                     th { background-color: #f3f4f6; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
@@ -912,10 +1192,119 @@
 
 
 
+    function updateLiveHeaderTitlePreview() {
+      const hospInput = document.getElementById('set-hospital-name');
+      const liveTitle = document.getElementById('live-header-hosp-name');
+      if (hospInput && liveTitle) {
+        liveTitle.innerText = hospInput.value.trim() || 'مستشفى المنيا الجامعى للعيون';
+      }
+    }
+
+    function clearLogoInput(side) {
+      const input = document.getElementById(`set-${side}-logo`);
+      if (input) {
+        input.value = '';
+        updateSettingsLogoPreview(side);
+      }
+    }
+
+    function updateSettingsLogoPreview(side) {
+      const input = document.getElementById(`set-${side}-logo`);
+      const img = document.getElementById(`preview-${side}-logo`);
+      const placeholder = document.getElementById(`placeholder-${side}-logo`);
+      const status = document.getElementById(`status-${side}-logo`);
+      const liveSlot = document.getElementById(`live-header-${side}-slot`);
+      if (!input || !img || !placeholder || !status) return;
+
+      const rawVal = input.value.trim();
+      if (!rawVal) {
+        img.removeAttribute('src');
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        status.className = 'text-[11px] text-gray-500 mt-1';
+        status.innerText = side === 'right' ? 'اختياري — يظهر أقصى يمين الترويسة' : 'اختياري — يظهر أقصى يسار الترويسة';
+        if (liveSlot) liveSlot.innerHTML = '';
+        return;
+      }
+
+      const sources = resolveLogoSources(rawVal);
+      if (!sources) return;
+
+      status.className = 'text-[11px] text-blue-600 mt-1';
+      status.innerText = 'جاري معاينة الشعار...';
+
+      img.dataset.fallbackStep = '0';
+      img.dataset.fb1 = sources.fb1 || '';
+      img.dataset.fb2 = sources.fb2 || '';
+      img.src = sources.primary;
+
+      if (liveSlot) {
+        liveSlot.innerHTML = buildLogoImgHtml(rawVal, side === 'right' ? 'شعار يمين التقرير' : 'شعار يسار التقرير');
+      }
+    }
+
+    function onPreviewLogoLoad(side) {
+      const img = document.getElementById(`preview-${side}-logo`);
+      const placeholder = document.getElementById(`placeholder-${side}-logo`);
+      const status = document.getElementById(`status-${side}-logo`);
+      if (img) img.classList.remove('hidden');
+      if (placeholder) placeholder.classList.add('hidden');
+      if (status) {
+        status.className = 'text-[11px] text-emerald-700 font-bold mt-1';
+        status.innerText = 'تم تحميل الشعار بنجاح وملائمته للترويسة';
+      }
+    }
+
+    function onPreviewLogoError(side) {
+      const img = document.getElementById(`preview-${side}-logo`);
+      const placeholder = document.getElementById(`placeholder-${side}-logo`);
+      const status = document.getElementById(`status-${side}-logo`);
+      if (!img) return;
+
+      const step = Number(img.dataset.fallbackStep || '0');
+      const fb1 = img.dataset.fb1 || '';
+      const fb2 = img.dataset.fb2 || '';
+      if (step === 0 && fb1 && img.src !== fb1) {
+        img.dataset.fallbackStep = '1';
+        img.src = fb1;
+        return;
+      }
+      if (step <= 1 && fb2 && img.src !== fb2) {
+        img.dataset.fallbackStep = '2';
+        img.src = fb2;
+        return;
+      }
+
+      img.classList.add('hidden');
+      if (placeholder) placeholder.classList.remove('hidden');
+      if (status) {
+        status.className = 'text-[11px] text-red-600 font-bold mt-1';
+        status.innerText = 'تعذر تحميل الصورة — تأكد أن صلاحية الملف في جوجل درايف (أي شخص لديه الرابط)';
+      }
+    }
+
+    function showSettingsSaveBanner(msg, isError = false) {
+      const banner = document.getElementById('settings-save-banner');
+      const icon = document.getElementById('settings-save-banner-icon');
+      const text = document.getElementById('settings-save-banner-text');
+      if (!banner || !icon || !text) return;
+      banner.className = isError
+        ? 'mb-4 p-3 rounded border border-red-200 bg-red-50 text-red-800 text-sm font-bold flex items-center justify-between'
+        : 'mb-4 p-3 rounded border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-bold flex items-center justify-between';
+      icon.className = isError ? 'fas fa-exclamation-circle text-red-600' : 'fas fa-check-circle text-emerald-600';
+      text.innerText = msg;
+      banner.classList.remove('hidden');
+    }
+
     function renderSettingsUI() {
       document.getElementById('set-hospital-name').value = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
       document.getElementById('set-team-signature').value = settingsData.teamSignature || 'فريق مكافحة العدوى';
       document.getElementById('set-manager-signature').value = settingsData.managerSignature || 'مدير عام المستشفى';
+      document.getElementById('set-right-logo').value = settingsData.rightLogoUrl || '';
+      document.getElementById('set-left-logo').value = settingsData.leftLogoUrl || '';
+      updateLiveHeaderTitlePreview();
+      updateSettingsLogoPreview('right');
+      updateSettingsLogoPreview('left');
       
       const pwds = settingsData.passwords || { admin: 'admin', manger: 'manger', user: 'user' };
       document.getElementById('pass-admin').value = pwds.admin;
@@ -991,6 +1380,8 @@
         hospitalName: document.getElementById('set-hospital-name').value.trim() || 'مستشفى المنيا الجامعى للعيون',
         teamSignature: document.getElementById('set-team-signature').value.trim() || 'فريق مكافحة العدوى',
         managerSignature: document.getElementById('set-manager-signature').value.trim() || 'مدير عام المستشفى',
+        rightLogoUrl: document.getElementById('set-right-logo').value.trim(),
+        leftLogoUrl: document.getElementById('set-left-logo').value.trim(),
         passwords: {
             admin: sanitizePass(document.getElementById('pass-admin').value) || 'admin',
             manger: sanitizePass(document.getElementById('pass-manger').value) || 'manger',
@@ -1018,12 +1409,12 @@
       loading(true);
       google.script.run.withSuccessHandler(() => {
         loading(false);
-        alert('تم حفظ الإعدادات بنجاح');
         settingsData = newSettings;
-        renderSettingsUI(); 
+        renderSettingsUI();
+        showSettingsSaveBanner('تم حفظ الإعدادات وشعارات الترويسة بنجاح');
       }).withFailureHandler(e => {
         loading(false);
-        alert('خطأ: ' + e.message);
+        showSettingsSaveBanner('خطأ أثناء حفظ الإعدادات: ' + (e.message || e), true);
       }).saveSettingsData(newSettings);
     }
 
@@ -1144,6 +1535,7 @@
         document.getElementById('daily-form-container').classList.add('hidden');
         document.getElementById('daily-result-view').classList.remove('hidden');
 
+        populateReportLogoSlots('daily-right-logo-slot', 'daily-left-logo-slot');
         document.getElementById('daily-hosp-name').innerText = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
         document.getElementById('daily-team-sig').innerText = settingsData.teamSignature || 'فريق مكافحة العدوى';
         document.getElementById('res-date').innerText = data.date;
@@ -1260,15 +1652,15 @@
         const managerSig = settingsData?.managerSignature || 'مدير عام المستشفى';
         
         let html = `
-            <div class="flex items-center justify-between mb-2 border-b-2 border-gray-800 pb-2 avoid-break">
-                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain no-print">
-                <div class="text-center flex-1">
+            <div class="report-header-bar mb-2 border-b-2 border-gray-800 pb-2 avoid-break">
+                ${getReportLogoSlotHtml('right')}
+                <div class="text-center flex-1 px-2">
                     <h1 class="text-lg font-bold text-gray-900">${hospName}</h1>
                     <h2 class="text-base font-bold text-gray-800">وحدة مكافحة العدوى</h2>
                     <p class="text-sm text-gray-700 mt-1">${title}</p>
                     <div class="mt-1 text-sm text-gray-800">نسبة التزام المستشفى الكلية: <span class="font-bold text-blue-900 text-lg">${hospScore}%</span></div>
                 </div>
-                <div class="w-12 no-print"></div>
+                ${getReportLogoSlotHtml('left')}
             </div>
             <div class="mb-4 text-left no-print flex flex-wrap gap-2">
                 <button onclick="window.print()" class="manger-hide bg-gray-800 text-white px-5 py-2 rounded hover:bg-gray-700 shadow flex items-center gap-2 transition">
@@ -1546,13 +1938,19 @@
 
         const hospName = settingsData?.hospitalName || 'مستشفى المنيا الجامعى للعيون';
         const printHeader = `
-            <div class="hidden print-only mb-2 border-b-2 border-black pb-1 text-center">
-                <h1 class="text-lg font-bold mb-1">${hospName}</h1>
-                <h2 class="text-base font-bold mb-1">وحدة مكافحة العدوى</h2>
-                <div class="flex flex-wrap justify-center gap-6 text-xs font-bold mt-2">
-                    <span>من تاريخ: ${filters?.start || '-'}</span>
-                    <span>إلى تاريخ: ${filters?.end || '-'}</span>
-                    <span>القسم: ${filters?.dept || 'الكل'}</span>
+            <div class="hidden print-only mb-2 border-b-2 border-black pb-2 avoid-break">
+                <div class="report-header-bar">
+                    ${getReportLogoSlotHtml('right')}
+                    <div class="text-center flex-1 px-2">
+                        <h1 class="text-lg font-bold mb-1">${hospName}</h1>
+                        <h2 class="text-base font-bold mb-1">وحدة مكافحة العدوى</h2>
+                        <div class="flex flex-wrap justify-center gap-6 text-xs font-bold mt-2">
+                            <span>من تاريخ: ${filters?.start || '-'}</span>
+                            <span>إلى تاريخ: ${filters?.end || '-'}</span>
+                            <span>القسم: ${filters?.dept || 'الكل'}</span>
+                        </div>
+                    </div>
+                    ${getReportLogoSlotHtml('left')}
                 </div>
             </div>
         `;
@@ -1763,10 +2161,16 @@
         <div class="bg-white p-8 border border-gray-200 shadow-sm mb-4 relative print-container">
             
             <!-- Header -->
-            <div class="avoid-break text-center border-b-2 border-blue-900 pb-1 mb-2">
-                <h1 class="text-xl font-bold text-blue-900 mb-1">${hospName}</h1>
-                <h2 class="text-lg font-bold text-blue-800">وحدة مكافحة العدوى</h2>
-                <div class="flex justify-between items-end mt-4 px-10">
+            <div class="avoid-break border-b-2 border-blue-900 pb-2 mb-3">
+                <div class="report-header-bar">
+                    ${getReportLogoSlotHtml('right')}
+                    <div class="text-center flex-1 px-2">
+                        <h1 class="text-xl font-bold text-blue-900 mb-1">${hospName}</h1>
+                        <h2 class="text-lg font-bold text-blue-800">وحدة مكافحة العدوى</h2>
+                    </div>
+                    ${getReportLogoSlotHtml('left')}
+                </div>
+                <div class="flex flex-wrap justify-between items-end mt-3 px-4 md:px-10 gap-2">
                     <p class="text-sm font-bold">تقرير مرور يومي مجمع</p>
                     <div class="text-sm border border-gray-400 px-4 py-1 rounded bg-gray-50">
                         <span class="font-bold text-blue-900 ml-2">التاريخ:</span> 
@@ -1851,6 +2255,7 @@
         document.getElementById('archive-result').classList.add('hidden');
         document.getElementById('archive-detail-view').classList.remove('hidden');
 
+        populateReportLogoSlots('arc-right-logo-slot', 'arc-left-logo-slot');
         document.getElementById('arc-res-hosp-name').innerText = settingsData.hospitalName || 'مستشفى المنيا الجامعى للعيون';
         document.getElementById('arc-res-team-sig').innerText = settingsData.teamSignature || 'فريق مكافحة العدوى';
         document.getElementById('arc-res-date').innerText = report.date;
