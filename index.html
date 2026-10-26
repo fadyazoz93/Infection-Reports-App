@@ -34,8 +34,8 @@
         background-color: white !important;
       }
       
-      /* 2. Hide UI Navigation & Helpers */
-      .no-print, #sidebar, #mobileMenu, #archive-filter-input, #loading { 
+      /* 2. Hide UI Navigation, Helpers & Logos in Print/PDF */
+      .no-print, #sidebar, #mobileMenu, #archive-filter-input, #loading, img[src*="favicon"] { 
         display: none !important; 
       }
       
@@ -407,13 +407,13 @@
         <!-- Generated Report View (Hidden initially) -->
         <div id="daily-result-view" class="hidden bg-white p-8 max-w-4xl mx-auto border border-gray-300 shadow-lg print-only">
             <div class="flex items-center justify-between border-b-2 border-blue-900 pb-2 mb-3 avoid-break">
-                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain">
+                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain no-print">
                 <div class="text-center flex-1">
                     <h1 id="daily-hosp-name" class="text-lg font-bold text-blue-900">مستشفى المنيا الجامعى للعيون</h1>
                     <h2 class="text-base font-bold text-blue-800">وحدة مكافحة العدوى</h2>
                     <p class="text-gray-600 text-xs mt-0.5">تقرير مرور يومي</p>
                 </div>
-                <div class="w-12"></div>
+                <div class="w-12 no-print"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-y-1 gap-x-8 mb-4 text-xs avoid-break">
@@ -1261,14 +1261,14 @@
         
         let html = `
             <div class="flex items-center justify-between mb-2 border-b-2 border-gray-800 pb-2 avoid-break">
-                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain">
+                <img src="/favicon.svg" alt="شعار مكافحة العدوى" class="w-12 h-12 object-contain no-print">
                 <div class="text-center flex-1">
                     <h1 class="text-lg font-bold text-gray-900">${hospName}</h1>
                     <h2 class="text-base font-bold text-gray-800">وحدة مكافحة العدوى</h2>
                     <p class="text-sm text-gray-700 mt-1">${title}</p>
                     <div class="mt-1 text-sm text-gray-800">نسبة التزام المستشفى الكلية: <span class="font-bold text-blue-900 text-lg">${hospScore}%</span></div>
                 </div>
-                <div class="w-12"></div>
+                <div class="w-12 no-print"></div>
             </div>
             <div class="mb-4 text-left no-print flex flex-wrap gap-2">
                 <button onclick="window.print()" class="manger-hide bg-gray-800 text-white px-5 py-2 rounded hover:bg-gray-700 shadow flex items-center gap-2 transition">
